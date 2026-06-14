@@ -1,0 +1,15 @@
+# Segredos — NUNCA versionar
+.env
+evolution.env
+
+# Docker e dados
+postgres_data/
+evolution_instances/
+
+# Node
+app/node_modules/
+app/.prisma/
+
+# Logs e temporários
+*.log
+/tmp/

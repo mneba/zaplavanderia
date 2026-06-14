@@ -1,0 +1,61 @@
+// Schema do ZapLavanderia — Fase 1
+// Multi-tenant: cada Lavanderia é um cliente do SaaS.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lavanderia {
+  id        String   @id @default(cuid())
+  slug      String   @unique // identificador curto, usado como nome da instância na Evolution (ex.: "lav-centro")
+  nome      String
+  donoFone  String // WhatsApp do dono p/ alertas de handoff (ex.: 5511999999999)
+  ativa     Boolean  @default(true)
+  config    Json // preços, máquinas, FAQ, políticas — vira o system prompt da IA
+  criadaEm  DateTime @default(now())
+
+  conversas Conversa[]
+}
+
+enum StatusConversa {
+  BOT // IA atendendo
+  HUMANO // dono assumiu; bot em silêncio
+}
+
+model Conversa {
+  id           String         @id @default(cuid())
+  lavanderiaId String
+  lavanderia   Lavanderia     @relation(fields: [lavanderiaId], references: [id])
+  clienteJid   String // ex.: 5511988887777@s.whatsapp.net
+  clienteNome  String         @default("Cliente")
+  status       StatusConversa @default(BOT)
+  criadaEm     DateTime       @default(now())
+  atualizadaEm DateTime       @updatedAt
+
+  mensagens Mensagem[]
+
+  @@unique([lavanderiaId, clienteJid])
+  @@index([lavanderiaId, atualizadaEm])
+}
+
+enum AutorMensagem {
+  CLIENTE
+  BOT
+  DONO
+}
+
+model Mensagem {
+  id         String        @id @default(cuid())
+  conversaId String
+  conversa   Conversa      @relation(fields: [conversaId], references: [id])
+  autor      AutorMensagem
+  texto      String
+  criadaEm   DateTime      @default(now())
+
+  @@index([conversaId, criadaEm])
+}

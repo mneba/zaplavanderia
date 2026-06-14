@@ -1,0 +1,21 @@
+{
+  "name": "zaplavanderia-app",
+  "version": "0.2.0",
+  "description": "ZapLavanderia — atendimento automatizado via WhatsApp para lavanderias autônomas",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "db:push": "prisma db push",
+    "lavanderia": "node scripts/criar-lavanderia.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@prisma/client": "^6.2.0",
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.0"
+  }
+}

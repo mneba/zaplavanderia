@@ -1,0 +1,54 @@
+{
+  "nome": "Lavanderia Exemplo 24h",
+  "endereco": "Rua das Flores, 123 - Centro, Diadema/SP",
+  "horario": "Aberta 24 horas, todos os dias",
+  "telefoneSuporte": "(11) 99999-9999",
+  "wifi": "Rede: LavExemplo | Senha: lavar123",
+
+  "maquinas": [
+    { "id": 1, "tipo": "lavadora", "capacidadeKg": 10, "precoReais": 18 },
+    { "id": 2, "tipo": "lavadora", "capacidadeKg": 10, "precoReais": 18 },
+    { "id": 3, "tipo": "lavadora", "capacidadeKg": 17, "precoReais": 25 },
+    { "id": 4, "tipo": "secadora", "capacidadeKg": 10, "precoReais": 18 },
+    { "id": 5, "tipo": "secadora", "capacidadeKg": 10, "precoReais": 18 }
+  ],
+
+  "formasPagamento": [
+    "Pix (QR Code na máquina)",
+    "Cartão de crédito/débito por aproximação",
+    "App da lavanderia"
+  ],
+
+  "duracaoCicloMinutos": {
+    "lavagem": 35,
+    "secagem": 45
+  },
+
+  "faq": [
+    {
+      "pergunta": "Preciso levar sabão?",
+      "resposta": "Não! Nossas lavadoras já dosam sabão e amaciante automaticamente, sem custo adicional."
+    },
+    {
+      "pergunta": "Como usar a máquina?",
+      "resposta": "1) Coloque as roupas na máquina; 2) Feche a porta; 3) Faça o pagamento via Pix ou cartão no totem; 4) A máquina inicia automaticamente."
+    },
+    {
+      "pergunta": "A máquina travou ou não iniciou, e agora?",
+      "resposta": "Primeiro confirme se o pagamento foi aprovado. Se foi e a máquina não iniciou, informe o número da máquina e o horário aqui no chat que abriremos um chamado de reembolso/destravamento."
+    },
+    {
+      "pergunta": "Posso lavar tênis, edredom ou pet (cama de cachorro)?",
+      "resposta": "Edredom: sim, use a máquina de 17kg. Tênis: sim, dentro de uma fronha ou saco de lavagem. Itens de pet: temos restrições por higiene — consulte as placas na loja."
+    }
+  ],
+
+  "politicaReembolso": "Reembolsos são processados via Pix em até 24h úteis após confirmação da falha. É necessário informar: número da máquina, horário do pagamento e chave Pix.",
+
+  "regrasAtendimento": [
+    "Nunca prometa reembolso imediato — sempre diga que o chamado será analisado em até 24h úteis.",
+    "Se o cliente relatar problema com máquina, colete: número da máquina, horário e comprovante de pagamento.",
+    "Se o cliente estiver irritado ou pedir falar com humano, acione o atendimento humano.",
+    "Não invente informações sobre preços, horários ou políticas que não estejam neste documento."
+  ]
+}
