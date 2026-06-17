@@ -1,4 +1,4 @@
-# Segredos — NUNCA versionar
+# Segredos
 .env
 evolution.env
 
@@ -9,6 +9,8 @@ evolution_instances/
 # Node
 app/node_modules/
 app/.prisma/
+painel/node_modules/
+painel/dist/
 
 # Logs e temporários
 *.log

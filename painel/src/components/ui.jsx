@@ -1,0 +1,147 @@
+import { useState } from "react";
+
+// ── Logo ──────────────────────────────────────────────────────
+export function Logo({ size = "md" }) {
+  const s = size === "sm" ? "1rem" : "1.25rem";
+  return (
+    <span style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: s, display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--zap)", boxShadow: "0 0 0 3px rgba(29,171,84,.2)", flexShrink: 0 }} />
+      Zap<span style={{ color: "var(--turq-deep)" }}>Lavanderia</span>
+    </span>
+  );
+}
+
+// ── Badge de status ───────────────────────────────────────────
+export function Badge({ status }) {
+  const cfg = {
+    BOT: { bg: "var(--turq-light)", color: "var(--turq-deep)", label: "Bot" },
+    HUMANO: { bg: "var(--warning-light)", color: "var(--warning)", label: "Humano" },
+    PRO: { bg: "var(--pro-light)", color: "var(--pro)", label: "Pro ⭐" },
+  }[status] || { bg: "var(--bg)", color: "var(--ink-soft)", label: status };
+
+  return (
+    <span style={{
+      background: cfg.bg, color: cfg.color,
+      fontSize: ".75rem", fontWeight: 700,
+      padding: "2px 10px", borderRadius: 99,
+      whiteSpace: "nowrap",
+    }}>{cfg.label}</span>
+  );
+}
+
+// ── Botão ─────────────────────────────────────────────────────
+export function Btn({ children, onClick, variant = "primary", size = "md", disabled, style }) {
+  const variants = {
+    primary: { bg: "var(--turq-deep)", color: "#fff" },
+    success: { bg: "var(--zap)", color: "#fff" },
+    danger: { bg: "var(--danger)", color: "#fff" },
+    ghost: { bg: "transparent", color: "var(--ink-soft)", border: "1px solid var(--border)" },
+  };
+  const v = variants[variant];
+  const pad = size === "sm" ? "6px 14px" : "10px 20px";
+  const fs = size === "sm" ? ".85rem" : ".95rem";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: v.bg, color: v.color, border: v.border || "none",
+        padding: pad, fontSize: fs, fontWeight: 600,
+        borderRadius: "var(--radius-sm)", cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? .5 : 1, transition: "opacity .15s",
+        ...style,
+      }}
+    >{children}</button>
+  );
+}
+
+// ── Input ─────────────────────────────────────────────────────
+export function Input({ label, error, ...props }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {label && <label style={{ fontSize: ".85rem", fontWeight: 600, color: "var(--ink-soft)" }}>{label}</label>}
+      <input
+        {...props}
+        style={{
+          border: `1.5px solid ${error ? "var(--danger)" : "var(--border)"}`,
+          borderRadius: "var(--radius-sm)", padding: "10px 14px",
+          fontSize: ".95rem", outline: "none", background: "var(--surface)",
+          transition: "border-color .15s",
+          ...props.style,
+        }}
+        onFocus={(e) => { e.target.style.borderColor = "var(--turq)"; props.onFocus?.(e); }}
+        onBlur={(e) => { e.target.style.borderColor = error ? "var(--danger)" : "var(--border)"; props.onBlur?.(e); }}
+      />
+      {error && <span style={{ fontSize: ".8rem", color: "var(--danger)" }}>{error}</span>}
+    </div>
+  );
+}
+
+// ── Card ──────────────────────────────────────────────────────
+export function Card({ children, style }) {
+  return (
+    <div style={{
+      background: "var(--surface)", borderRadius: "var(--radius)",
+      border: "1px solid var(--border)", boxShadow: "var(--shadow)",
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+// ── Spinner ───────────────────────────────────────────────────
+export function Spinner({ size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ animation: "spin 1s linear infinite" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <circle cx="12" cy="12" r="10" stroke="var(--border)" strokeWidth="3" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="var(--turq)" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────
+export function Empty({ icone = "💬", titulo, descricao }) {
+  return (
+    <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--ink-soft)" }}>
+      <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>{icone}</div>
+      <div style={{ fontWeight: 700, marginBottom: 6, color: "var(--ink)" }}>{titulo}</div>
+      {descricao && <div style={{ fontSize: ".9rem" }}>{descricao}</div>}
+    </div>
+  );
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+export function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const show = (msg, tipo = "success") => {
+    const id = Date.now();
+    setToasts((t) => [...t, { id, msg, tipo }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000);
+  };
+  const ToastContainer = () => (
+    <div style={{ position: "fixed", bottom: 20, right: 20, display: "flex", flexDirection: "column", gap: 8, zIndex: 999 }}>
+      {toasts.map((t) => (
+        <div key={t.id} style={{
+          background: t.tipo === "error" ? "var(--danger)" : "var(--ink)",
+          color: "#fff", padding: "12px 18px", borderRadius: "var(--radius-sm)",
+          fontSize: ".9rem", fontWeight: 500, boxShadow: "var(--shadow-lg)",
+          animation: "slideIn .2s ease",
+        }}>{t.msg}</div>
+      ))}
+      <style>{`@keyframes slideIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }`}</style>
+    </div>
+  );
+  return { show, ToastContainer };
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+export function tempoRelativo(data) {
+  const diff = Date.now() - new Date(data).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}

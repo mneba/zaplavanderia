@@ -1,5 +1,4 @@
-// Schema do ZapLavanderia — Fase 1
-// Multi-tenant: cada Lavanderia é um cliente do SaaS.
+// Schema do ZapLavanderia — Fase 3
 
 generator client {
   provider = "prisma-client-js"
@@ -10,30 +9,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Plano {
+  TRIAL
+  STARTER
+  PRO
+  EXPIRADO
+}
+
 model Lavanderia {
-  id        String   @id @default(cuid())
-  slug      String   @unique // identificador curto, usado como nome da instância na Evolution (ex.: "lav-centro")
-  nome      String
-  donoFone  String // WhatsApp do dono p/ alertas de handoff (ex.: 5511999999999)
-  ativa     Boolean  @default(true)
-  config    Json // preços, máquinas, FAQ, políticas — vira o system prompt da IA
-  criadaEm  DateTime @default(now())
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  nome           String
+  donoFone       String    @default("")
+  ativa          Boolean   @default(true)
+  plano          Plano     @default(TRIAL)
+  trialExpiraEm  DateTime?
+  config         Json      @default("{}")
+  criadaEm       DateTime  @default(now())
 
   conversas Conversa[]
+  usuarios  Usuario[]
+}
+
+model Usuario {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  senhaHash    String
+  nome         String
+  lavanderiaId String
+  lavanderia   Lavanderia @relation(fields: [lavanderiaId], references: [id])
+  criadoEm     DateTime   @default(now())
 }
 
 enum StatusConversa {
-  BOT // IA atendendo
-  HUMANO // dono assumiu; bot em silêncio
+  BOT
+  HUMANO
 }
 
 model Conversa {
   id           String         @id @default(cuid())
   lavanderiaId String
   lavanderia   Lavanderia     @relation(fields: [lavanderiaId], references: [id])
-  clienteJid   String // ex.: 5511988887777@s.whatsapp.net
+  clienteJid   String
   clienteNome  String         @default("Cliente")
   status       StatusConversa @default(BOT)
+  primeiraMsg  Boolean        @default(true)
   criadaEm     DateTime       @default(now())
   atualizadaEm DateTime       @updatedAt
 
