@@ -18,9 +18,6 @@ const logger = pino({ level: "warn" });
 // Mapa de sessões ativas: slug → { sock, status, qr }
 const sessoes = new Map();
 
-// Último QR gerado por slug (para entregar quando painel conectar)
-const ultimosQrs = new Map();
-
 // Callbacks registrados pelo server.js
 let onMensagem = null;
 let onStatusChange = null;
@@ -100,7 +97,14 @@ export async function iniciarSessao(slug) {
         onStatusChange?.(slug, "close");
         console.log(`⚠️ [${slug}] Conexão fechada (${codigo}). Deslogado: ${deslogado}`);
 
-        if (!deslogado) {
+        if (deslogado) {
+          // Limpa sessão corrompida do disco automaticamente
+          try {
+            const { rmSync } = await import("node:fs");
+            rmSync(dir, { recursive: true, force: true });
+            console.log(`🗑️ [${slug}] Sessão corrompida removida automaticamente`);
+          } catch {}
+        } else {
           // Reconecta após 5 segundos
           setTimeout(() => iniciarSessao(slug), 5000);
         }
@@ -108,16 +112,13 @@ export async function iniciarSessao(slug) {
     });
 
     sock.ev.on("messages.upsert", async ({ messages, type }) => {
-      console.log(`[${slug}] messages.upsert type=${type} count=${messages.length}`);
       if (type !== "notify") return;
       for (const msg of messages) {
-        console.log(`[${slug}] msg fromMe=${msg.key.fromMe} jid=${msg.key.remoteJid}`);
         if (msg.key.fromMe) continue;
         const jid = msg.key.remoteJid;
         if (!jid?.endsWith("@s.whatsapp.net") && !jid?.endsWith("@lid")) continue;
         const texto = extrairTexto(msg.message);
         const nome = msg.pushName || "Cliente";
-        console.log(`[${slug}] texto=${texto} nome=${nome}`);
         if (texto) onMensagem?.(slug, { jid, texto, nome });
       }
     });
@@ -132,9 +133,18 @@ export async function iniciarSessao(slug) {
 
 export async function desconectarSessao(slug) {
   const s = sessoes.get(slug);
-  if (!s?.sock) return;
+  // Tenta logout gracioso
+  if (s?.sock) {
+    try { await s.sock.logout(); } catch {}
+    try { s.sock.end(); } catch {}
+  }
+  // Limpa sessão do disco
   try {
-    await s.sock.logout();
+    const { rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const dir = join(process.env.SESSOES_DIR || "/data/sessoes", slug);
+    rmSync(dir, { recursive: true, force: true });
+    console.log(`🗑️ [${slug}] Sessão removida`);
   } catch {}
   sessoes.delete(slug);
   onStatusChange?.(slug, "close");
@@ -146,8 +156,10 @@ export async function enviarMensagem(slug, numero, texto) {
     throw new Error(`Sessão ${slug} não está conectada`);
   }
 
-  // Usa o JID correto — suporte a @lid e @s.whatsapp.net
+  // Mantém JID original — Baileys lida com @lid nativamente
   const jid = numero.includes('@') ? numero : `${numero}@s.whatsapp.net`;
+  const delay = Math.min(Math.max(texto.length * 40, 1200), 5000);
+
   await s.sock.sendMessage(jid, { text: texto });
 }
 
@@ -160,10 +172,6 @@ export async function verificarContato(slug, numero) {
   } catch {
     return false;
   }
-}
-
-export function ultimoQr(slug) {
-  return ultimosQrs.get(slug) || null;
 }
 
 export async function iniciarTodasSessoes(prisma) {

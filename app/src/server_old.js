@@ -70,6 +70,7 @@ app.register(async (fastify) => {
       if (!wsClients.has(lavanderiaId)) wsClients.set(lavanderiaId, new Set());
       wsClients.get(lavanderiaId).add(socket);
       socket.on("close", () => wsClients.get(lavanderiaId)?.delete(socket));
+
     } catch { socket.close(1008, "Token inválido"); }
   });
 });
@@ -77,7 +78,7 @@ app.register(async (fastify) => {
 // ── Rotas ─────────────────────────────────────────────────────
 await app.register(authRoutes);
 await app.register(cadastroRoutes);
-await app.register(painelRoutes);
+await app.register(painelRoutes, { enviarMensagem });
 await app.register(configRoutes);
 await app.register(conexaoRoutes);
 
@@ -117,17 +118,10 @@ async function aoReceberMensagem(slug, { jid, texto, nome }) {
       create: { lavanderiaId: lavanderia.id, clienteJid: jid, clienteNome: nome, primeiraMsg: true },
       update: { clienteNome: nome },
     });
-    // Rebusca o status atual — pode ter sido alterado pelo dono via painel
-    const statusAtual = await prisma.conversa.findUnique({
-      where: { id: conversa.id },
-      select: { status: true, primeiraMsg: true },
-    });
-    conversa.status = statusAtual.status;
-    conversa.primeiraMsg = statusAtual.primeiraMsg;
 
     // Boas-vindas na primeira mensagem
     if (conversa.primeiraMsg && config.mensagemBoasVindas) {
-      await enviarMensagem(slug, jid.replace("@s.whatsapp.net", ""), config.mensagemBoasVindas);
+      await enviarMensagem(slug, jid, config.mensagemBoasVindas);
       await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: config.mensagemBoasVindas } });
       await prisma.conversa.update({ where: { id: conversa.id }, data: { primeiraMsg: false } });
     }
@@ -149,7 +143,7 @@ async function aoReceberMensagem(slug, { jid, texto, nome }) {
     const { texto: resposta, precisaHumano } = await gerarResposta(lavanderia, historico);
     if (!resposta) return;
 
-    await enviarMensagem(slug, jid.replace("@s.whatsapp.net", ""), resposta);
+    await enviarMensagem(slug, jid, resposta);
     const msgBot = await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: resposta } });
 
     app.notificarWs(lavanderia.id, { tipo: "NOVA_MENSAGEM", conversaId: conversa.id, mensagem: msgBot });
@@ -171,9 +165,10 @@ async function aoMudarStatus(slug, estado, info) {
 
 async function aoReceberQr(slug, qrBase64) {
   const lav = await prisma.lavanderia.findUnique({ where: { slug }, select: { id: true } });
-  if (!lav) return;
+  if (!lav) { app.log.warn({ slug }, "lavanderia nao encontrada para QR"); return; }
+  const clientes = wsClients.get(lav.id);
+  app.log.info({ slug, lavId: lav.id, wsClientes: clientes?.size || 0 }, "QR Code gerado — notificando WS");
   app.notificarWs(lav.id, { tipo: "QR_ATUALIZADO", qr: qrBase64 });
-  app.log.info({ slug }, "QR Code gerado");
 }
 
 // Registra callbacks no Baileys

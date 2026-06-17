@@ -1,4 +1,6 @@
-import { enviarTexto, jidParaNumero } from "./evolution.js";
+// Rotas do painel
+import { enviarMensagem } from "./baileys.js";
+
 
 // Intervalo entre mensagens no disparo Pro (ms) — anti-ban
 const DELAY_DISPARO_MIN = 8000;
@@ -59,7 +61,7 @@ export async function painelRoutes(app) {
   });
 
   // ── Ações ────────────────────────────────────────────────
-  app.post("/painel/conversas/:id/assumir", auth, async (req, reply) => {
+  app.post("/painel/conversas/:id/assumir", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { lavanderiaId } = req.user;
     const conversa = await app.prisma.conversa.findFirst({
       where: { id: req.params.id, lavanderiaId },
@@ -75,7 +77,7 @@ export async function painelRoutes(app) {
     return { ok: true };
   });
 
-  app.post("/painel/conversas/:id/liberar", auth, async (req, reply) => {
+  app.post("/painel/conversas/:id/liberar", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { lavanderiaId } = req.user;
     const conversa = await app.prisma.conversa.findFirst({
       where: { id: req.params.id, lavanderiaId },
@@ -91,7 +93,7 @@ export async function painelRoutes(app) {
     return { ok: true };
   });
 
-  app.post("/painel/conversas/:id/responder", auth, async (req, reply) => {
+  app.post("/painel/conversas/:id/responder", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { lavanderiaId } = req.user;
     const { texto } = req.body;
 
@@ -103,8 +105,15 @@ export async function painelRoutes(app) {
     });
     if (!conversa) return reply.status(404).send({ erro: "Conversa não encontrada" });
 
-    const numero = jidParaNumero(conversa.clienteJid);
-    await enviarTexto(conversa.lavanderia.slug, numero, texto.trim());
+    const numero = conversa.clienteJid;
+    console.log(`RESPONDER: slug=${conversa.lavanderia.slug} jid=${numero} texto=${texto.trim()}`);
+    try {
+      await enviarMensagem(conversa.lavanderia.slug, numero, texto.trim());
+      console.log("RESPONDER: enviado com sucesso");
+    } catch(e) {
+      console.error("RESPONDER ERRO:", e.message, e.stack);
+      throw e;
+    }
 
     const msg = await app.prisma.mensagem.create({
       data: { conversaId: conversa.id, autor: "DONO", texto: texto.trim() },

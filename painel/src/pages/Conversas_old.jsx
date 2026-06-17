@@ -43,7 +43,6 @@ function DetalheConversa({ conversa, onAtualizar, toast }) {
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
-  const [statusLocal, setStatusLocal] = useState(conversa.status);
   const fimRef = useRef(null);
 
   useEffect(() => {
@@ -77,8 +76,6 @@ function DetalheConversa({ conversa, onAtualizar, toast }) {
     try {
       await api.assumir(conversa.id);
       toast.show("Conversa assumida — bot em silêncio");
-      setStatusLocal("HUMANO");
-      conversa.status = "HUMANO";
       onAtualizar();
     } catch (e) {
       toast.show(e.message, "error");
@@ -89,8 +86,6 @@ function DetalheConversa({ conversa, onAtualizar, toast }) {
     try {
       await api.liberar(conversa.id);
       toast.show("Bot reativado para essa conversa");
-      setStatusLocal("BOT");
-      conversa.status = "BOT";
       onAtualizar();
     } catch (e) {
       toast.show(e.message, "error");
@@ -115,8 +110,8 @@ function DetalheConversa({ conversa, onAtualizar, toast }) {
             +{conversa.clienteJid?.replace("@s.whatsapp.net", "")}
           </div>
         </div>
-        <Badge status={statusLocal} />
-        {statusLocal === "BOT" ? (
+        <Badge status={conversa.status} />
+        {conversa.status === "BOT" ? (
           <Btn variant="ghost" size="sm" onClick={assumir}>Assumir</Btn>
         ) : (
           <Btn variant="success" size="sm" onClick={liberar}>Devolver ao bot</Btn>
@@ -149,17 +144,17 @@ function DetalheConversa({ conversa, onAtualizar, toast }) {
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-          placeholder={statusLocal === "BOT" ? "Assuma a conversa para responder..." : "Digite sua resposta (Enter para enviar)..."}
-          disabled={statusLocal === "BOT"}
+          placeholder={conversa.status === "BOT" ? "Assuma a conversa para responder..." : "Digite sua resposta (Enter para enviar)..."}
+          disabled={conversa.status === "BOT"}
           rows={1}
           style={{
             flex: 1, resize: "none", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)",
             padding: "10px 14px", fontSize: ".92rem", outline: "none",
-            opacity: statusLocal === "BOT" ? .5 : 1,
+            opacity: conversa.status === "BOT" ? .5 : 1,
             maxHeight: 120, overflowY: "auto",
           }}
         />
-        <Btn onClick={enviar} disabled={enviando || !texto.trim() || statusLocal === "BOT"} variant="success">
+        <Btn onClick={enviar} disabled={enviando || !texto.trim() || conversa.status === "BOT"} variant="success">
           {enviando ? "..." : "Enviar"}
         </Btn>
       </div>

@@ -37,8 +37,8 @@ export const api = {
     return req("GET", `/painel/conversas${q ? `?${q}` : ""}`);
   },
   conversa: (id) => req("GET", `/painel/conversas/${id}`),
-  assumir: (id) => req("POST", `/painel/conversas/${id}/assumir`),
-  liberar: (id) => req("POST", `/painel/conversas/${id}/liberar`),
+  assumir: (id) => req("POST", `/painel/conversas/${id}/assumir`, {}),
+  liberar: (id) => req("POST", `/painel/conversas/${id}/liberar`, {}),
   responder: (id, texto) => req("POST", `/painel/conversas/${id}/responder`, { texto }),
 
   // Clientes e disparo
