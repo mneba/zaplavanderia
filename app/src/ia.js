@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.AI_MODEL || "claude-haiku-4-5";
-const MAX_HISTORICO = 20;
+const MAX_HISTORICO = 10; // Reduzido de 40 para 10
 
 const TONS = {
   simpatico: "Seja simpático, caloroso e próximo. Use emojis com moderação (1-2 por mensagem). Trate o cliente com carinho mas sem exageros.",
@@ -24,7 +24,7 @@ export function montarSystemPrompt(lavanderia) {
   const c = lavanderia.config || {};
 
   const maquinas = (c.maquinas || [])
-    .map((m) => `- Máquina ${m.id}: ${m.tipo} ${m.capacidadeKg}kg — R$ ${Number(m.precoReais).toFixed(2)}`)
+    .map((m) => `- ${m.tipo === "lavadora" ? "Lavadora" : "Secadora"} ${m.capacidadeKg}kg — R$ ${Number(m.precoReais).toFixed(2)}`)
     .join("\n");
 
   const faq = (c.faq || [])
@@ -33,10 +33,8 @@ export function montarSystemPrompt(lavanderia) {
     .join("\n\n");
 
   const pagamentos = (c.formasPagamento || []).map((f) => `- ${f}`).join("\n");
-
   const tom = TONS[c.tom] || TONS.simpatico;
 
-  // Regras de escalação
   const escalacoes = [
     ...(c.escalacoes || []).map((id) => ESCALACOES_LABELS[id]).filter(Boolean),
     ...(c.escalacaoCustom ? [c.escalacaoCustom] : []),
@@ -48,6 +46,13 @@ export function montarSystemPrompt(lavanderia) {
 
   return `Você é o atendente virtual da "${lavanderia.nome}", uma lavanderia autônoma (self-service).
 
+# REGRA MAIS IMPORTANTE: responda SOMENTE à última mensagem
+- Leia APENAS a última mensagem do cliente e responda ela
+- IGNORE completamente o histórico anterior ao formular sua resposta
+- NUNCA mencione tênis, água ou qualquer outro assunto que não foi perguntado agora
+- Se a última mensagem não tiver relação com mensagens anteriores, trate ela como pergunta nova
+- Se não souber responder, diga que não tem essa informação e ofereça o telefone de suporte
+
 # Sobre a lavanderia
 ${c.endereco ? `Endereço: ${c.endereco}` : ""}
 ${c.horario ? `Horário: ${c.horario}` : ""}
@@ -58,7 +63,6 @@ ${c.franquia && c.franquia !== "independente" ? `Rede: ${c.franquia}` : ""}
 
 # Máquinas e preços
 ${maquinas || "Consulte a lavanderia para preços atualizados."}
-
 ${c.duracaoCicloMinutos ? `Duração média: lavagem ${c.duracaoCicloMinutos.lavagem} min | secagem ${c.duracaoCicloMinutos.secagem} min.` : ""}
 
 # Formas de pagamento
@@ -74,25 +78,23 @@ ${faq || "Responda com base nas informações acima."}
 # Tom de voz
 ${tom}
 
-# Regras de escalação para atendente humano (OBRIGATÓRIAS)
+# Regras de escalação (OBRIGATÓRIAS)
 ${regrasEscalacao}
 
 # Instruções gerais
 - Responda em português brasileiro, de forma curta e direta (é WhatsApp, ninguém quer textão).
-- NUNCA invente informação que não esteja acima. Se não souber, diga que vai verificar.
+- NUNCA invente informação que não esteja acima. Se não souber, diga que vai verificar ou indique o telefone de suporte.
 - Quando incluir a tag [HUMANO], continue sendo educado e diga que vai chamar um atendente.
-- A tag [HUMANO] deve aparecer SOMENTE no final da mensagem, nunca no meio.`;
-}
-
-const historicos = new Map();
-
-export function limparHistorico(jid) {
-  historicos.delete(jid);
+- A tag [HUMANO] deve aparecer SOMENTE no final da mensagem, nunca no meio.
+- FOQUE na última pergunta do cliente — não repita respostas de mensagens anteriores.`;
 }
 
 export async function gerarResposta(lavanderia, historicoMensagens) {
+  // Usa apenas as últimas MAX_HISTORICO mensagens
+  const mensagensRecentes = historicoMensagens.slice(-MAX_HISTORICO);
+
   const messages = [];
-  for (const m of historicoMensagens.slice(-MAX_HISTORICO)) {
+  for (const m of mensagensRecentes) {
     const role = m.autor === "CLIENTE" ? "user" : "assistant";
     const anterior = messages[messages.length - 1];
     if (anterior && anterior.role === role) {

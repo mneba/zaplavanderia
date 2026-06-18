@@ -1,6 +1,12 @@
 // Rotas do painel
 import { enviarMensagem } from "./baileys.js";
 
+// Converte JID para número limpo para exibição
+function jidParaNumero(jid) {
+  if (!jid) return "";
+  return jid.split("@")[0].split(":")[0];
+}
+
 
 // Intervalo entre mensagens no disparo Pro (ms) — anti-ban
 const DELAY_DISPARO_MIN = 8000;
@@ -173,7 +179,9 @@ export async function painelRoutes(app) {
     });
 
     // Hora atual: bloqueia envio fora de 8h–20h
-    const hora = new Date().getHours();
+    // Horário de Brasília (UTC-3)
+    const agora = new Date();
+    const hora = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
     if (hora < 8 || hora >= 20) {
       return reply.status(400).send({ erro: "Disparos permitidos apenas entre 8h e 20h" });
     }
@@ -184,7 +192,7 @@ export async function painelRoutes(app) {
     (async () => {
       for (const c of conversas) {
         try {
-          await enviarTexto(lavanderia.slug, jidParaNumero(c.clienteJid), mensagem.trim());
+          await enviarMensagem(lavanderia.slug, c.clienteJid, mensagem.trim());
         } catch (e) {
           app.log.error({ err: e.message }, "erro no disparo");
         }

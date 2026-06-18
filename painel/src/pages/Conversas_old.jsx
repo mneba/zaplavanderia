@@ -38,11 +38,17 @@ function BolhaMensagem({ msg }) {
   );
 }
 
-function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
+function DetalheConversa({ conversa, onAtualizar, toast }) {
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [statusLocal, setStatusLocal] = useState(conversa.status);
+
+  // Sincroniza só quando muda de conversa
+  useEffect(() => {
+    setStatusLocal(conversa.status);
+  }, [conversa.id]);
   const fimRef = useRef(null);
 
   useEffect(() => {
@@ -56,22 +62,6 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
   useEffect(() => {
     fimRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
-
-  // Atualiza mensagens em tempo real via WebSocket
-  useEffect(() => {
-    if (!wsEventos) return;
-    if (wsEventos.tipo === "NOVA_MENSAGEM" && wsEventos.conversaId === conversa.id) {
-      setMensagens((m) => {
-        // Evita duplicatas
-        if (m.find((msg) => msg.id === wsEventos.mensagem.id)) return m;
-        return [...m, wsEventos.mensagem];
-      });
-    }
-    if (wsEventos.tipo === "CONVERSA_ATUALIZADA" && wsEventos.conversaId === conversa.id) {
-      if (wsEventos.status) setStatusLocal(wsEventos.status);
-      onAtualizar();
-    }
-  }, [wsEventos]);
 
   async function enviar() {
     if (!texto.trim() || enviando) return;
@@ -92,7 +82,7 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
     try {
       await api.assumir(conversa.id);
       toast.show("Conversa assumida — bot em silêncio");
-      conversa.status = "HUMANO";
+      setStatusLocal("HUMANO");
       onAtualizar();
     } catch (e) {
       toast.show(e.message, "error");
@@ -103,7 +93,7 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
     try {
       await api.liberar(conversa.id);
       toast.show("Bot reativado para essa conversa");
-      conversa.status = "BOT";
+      setStatusLocal("BOT");
       onAtualizar();
     } catch (e) {
       toast.show(e.message, "error");
@@ -128,8 +118,8 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
             +{conversa.clienteJid?.replace("@s.whatsapp.net", "")}
           </div>
         </div>
-        <Badge status={conversa.status} />
-        {conversa.status === "BOT" ? (
+        <Badge status={statusLocal} />
+        {statusLocal === "BOT" ? (
           <Btn variant="ghost" size="sm" onClick={assumir}>Assumir</Btn>
         ) : (
           <Btn variant="success" size="sm" onClick={liberar}>Devolver ao bot</Btn>
@@ -162,17 +152,17 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos }) {
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-          placeholder={conversa.status === "BOT" ? "Assuma a conversa para responder..." : "Digite sua resposta (Enter para enviar)..."}
-          disabled={conversa.status === "BOT"}
+          placeholder={statusLocal === "BOT" ? "Assuma a conversa para responder..." : "Digite sua resposta (Enter para enviar)..."}
+          disabled={statusLocal === "BOT"}
           rows={1}
           style={{
             flex: 1, resize: "none", border: "1.5px solid var(--border)", borderRadius: "var(--radius-sm)",
             padding: "10px 14px", fontSize: ".92rem", outline: "none",
-            opacity: conversa.status === "BOT" ? .5 : 1,
+            opacity: statusLocal === "BOT" ? .5 : 1,
             maxHeight: 120, overflowY: "auto",
           }}
         />
-        <Btn onClick={enviar} disabled={enviando || !texto.trim() || conversa.status === "BOT"} variant="success">
+        <Btn onClick={enviar} disabled={enviando || !texto.trim() || statusLocal === "BOT"} variant="success">
           {enviando ? "..." : "Enviar"}
         </Btn>
       </div>
@@ -202,7 +192,7 @@ export default function Conversas() {
   useEffect(() => {
     if (!wsEventos) return;
     if (wsEventos.tipo === "NOVA_MENSAGEM" || wsEventos.tipo === "CONVERSA_ATUALIZADA") {
-      carregar(); // Atualiza lista de conversas
+      carregar();
       setAlertas(0);
     }
   }, [wsEventos]);
@@ -291,7 +281,6 @@ export default function Conversas() {
             key={selecionada.id}
             conversa={selecionada}
             onAtualizar={carregar}
-            wsEventos={wsEventos}
             toast={toast}
           />
         ) : (
