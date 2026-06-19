@@ -235,7 +235,7 @@ export default function Configuracoes() {
   );
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "28px 24px 110px" }}>
+    <div style={{ maxWidth: 780, margin: "0 auto", padding: "28px 24px 60px" }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontFamily: "var(--display)", fontSize: "1.5rem", marginBottom: 4 }}>
           Configurações da lavanderia
@@ -552,7 +552,12 @@ export default function Configuracoes() {
       </Secao>
 
       {/* Botão salvar fixo */}
-      <div className="config-save-bar">
+      <div style={{
+        position: "fixed", bottom: 0, left: 220, right: 0,
+        background: "rgba(240,245,246,.95)", backdropFilter: "blur(8px)",
+        borderTop: "1px solid var(--border)", padding: "14px 24px",
+        display: "flex", justifyContent: "flex-end", gap: 12, zIndex: 20,
+      }}>
         <Btn variant="ghost" onClick={gerarPreview} disabled={loadingPreview}>
           Visualizar prompt
         </Btn>

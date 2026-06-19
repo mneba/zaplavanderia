@@ -80,7 +80,7 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar }) 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Header */}
-      <div className="conversa-header-sticky" style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "#fff", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "#fff", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {onVoltar && (
           <button onClick={onVoltar} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--turq-deep)", fontSize: "1.3rem", padding: "0 4px", flexShrink: 0, lineHeight: 1 }}>
             &larr;

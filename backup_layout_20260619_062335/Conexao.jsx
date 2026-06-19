@@ -53,13 +53,13 @@ export default function Conexao() {
   const conectado = status?.conectado;
 
   return (
-    <div className="conexao-page" style={{ maxWidth: 620, margin: "0 auto", padding: "28px 24px" }}>
+    <div style={{ maxWidth: 620, margin: "0 auto", padding: "28px 24px" }}>
       <h1 style={{ fontFamily: "var(--display)", fontSize: "1.5rem", marginBottom: 24 }}>
         Conexao WhatsApp
       </h1>
 
       <Card style={{ marginBottom: 20, padding: 24 }}>
-        <div className="conexao-status-row">
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: "50%", background: loading ? "var(--bg)" : conectado ? "var(--zap-light)" : "var(--danger-light)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem" }}>
             {loading ? <Spinner size={24} /> : conectado ? "ok" : "x"}
           </div>
@@ -71,7 +71,7 @@ export default function Conexao() {
               <div style={{ fontSize: ".85rem", color: "var(--ink-soft)" }}>{status.numero}</div>
             )}
           </div>
-          <div className="conexao-actions" style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
             <Btn variant="ghost" size="sm" onClick={carregarStatus}>Atualizar</Btn>
             {conectado && <Btn variant="ghost" size="sm" onClick={desconectar}>Desconectar</Btn>}
           </div>

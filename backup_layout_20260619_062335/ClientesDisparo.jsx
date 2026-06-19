@@ -119,7 +119,7 @@ export function Disparo() {
   const foraHorario = hora < 8 || hora >= 20;
 
   return (
-    <div className="disparo-page" style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: "var(--display)", fontSize: "1.4rem", marginBottom: 4 }}>
           Disparo de mensagens <span style={{ fontSize: ".75rem", background: "var(--pro-light)", color: "var(--pro)", padding: "2px 8px", borderRadius: 99, fontFamily: "var(--body)" }}>Pro ⭐</span>
@@ -139,7 +139,7 @@ export function Disparo() {
         </div>
       )}
 
-      <div className="disparo-grid">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>
         {/* Lista de clientes */}
         <Card style={{ overflow: "hidden" }}>
           <div style={{

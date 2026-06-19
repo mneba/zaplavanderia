@@ -1,0 +1,90 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F0F5F6;
+  --surface: #FFFFFF;
+  --border: #D8E8EB;
+  --ink: #0D2B33;
+  --ink-soft: #46656E;
+  --ink-muted: #8AACB4;
+  --turq: #149CB3;
+  --turq-deep: #0C7487;
+  --turq-light: #E3F4F7;
+  --zap: #1DAB54;
+  --zap-light: #E8F8EE;
+  --zap-deep: #0D7A35;
+  --danger: #E03434;
+  --danger-light: #FEF0F0;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --pro: #7C3AED;
+  --pro-light: #EDE9FE;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --display: 'Bricolage Grotesque', sans-serif;
+  --body: 'Schibsted Grotesk', sans-serif;
+  --shadow: 0 1px 3px rgba(13,43,51,.08), 0 4px 12px rgba(13,43,51,.06);
+  --shadow-lg: 0 8px 24px rgba(13,43,51,.12);
+}
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+html, body { overflow-x: hidden; max-width: 100vw; }
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--body); cursor: pointer; }
+input, textarea { font-family: var(--body); }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* Desktop */
+.hide-mobile { display: block; }
+.show-mobile { display: none !important; }
+.main-content { margin-left: 220px; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: flex !important; }
+  .main-content { margin-left: 0 !important; padding-top: 56px; }
+}
+
+/* Conversas layout */
+.conversas-container {
+  height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .conversas-container {
+    height: calc(100vh - 56px);
+  }
+  .conversas-lista {
+    width: 100% !important;
+  }
+  .conversas-lista.oculto {
+    display: none !important;
+  }
+  .conversas-detalhe.oculto {
+    display: none !important;
+  }
+}
+
+/* Conversas responsivo */
+.conversas-lista { width: 320px; }
+.conversas-detalhe { display: flex; }
+
+@media (max-width: 768px) {
+  .conversas-lista { width: 100% !important; }
+  .conversas-lista.oculto { display: none !important; }
+  .conversas-detalhe.oculto { display: none !important; }
+}
