@@ -1,35 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { criarWs } from "../lib/api.js";
 import { Logo, Badge } from "../components/ui.jsx";
 
 const NAV = [
-  { to: "/", icone: "💬", label: "Conversas" },
-  { to: "/conexao", icone: "📱", label: "Conexão", sempre: true },
-  { to: "/clientes", icone: "👥", label: "Clientes", pro: true },
-  { to: "/disparo", icone: "📣", label: "Disparo", pro: true },
-  { to: "/configuracoes", icone: "⚙️", label: "Configurações", sempre: true },
+  { to: "/", label: "Conversas" },
+  { to: "/conexao", label: "Conexao" },
+  { to: "/clientes", label: "Clientes", pro: true },
+  { to: "/disparo", label: "Disparo", pro: true },
+  { to: "/configuracoes", label: "Config" },
 ];
-
-function BadgeTrial({ usuario }) {
-  if (!usuario?.trialExpiraEm) return null;
-  const dias = Math.max(0, Math.ceil((new Date(usuario.trialExpiraEm) - Date.now()) / 86400000));
-  if (usuario.plano !== "TRIAL") return null;
-
-  return (
-    <div style={{
-      margin: "8px 8px 0",
-      padding: "8px 12px",
-      borderRadius: 8,
-      background: dias <= 2 ? "rgba(224,52,52,.15)" : "rgba(255,197,61,.12)",
-      border: `1px solid ${dias <= 2 ? "rgba(224,52,52,.3)" : "rgba(255,197,61,.3)"}`,
-      fontSize: ".78rem",
-      color: dias <= 2 ? "#FCA5A5" : "#FDE68A",
-    }}>
-      ⏱️ Trial: <strong>{dias} dia{dias !== 1 ? "s" : ""}</strong> restante{dias !== 1 ? "s" : ""}
-    </div>
-  );
-}
 
 export default function Layout() {
   const nav = useNavigate();
@@ -38,6 +18,7 @@ export default function Layout() {
   });
   const [wsEventos, setWsEventos] = useState(null);
   const [alertas, setAlertas] = useState(0);
+  const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem("zap_token")) { nav("/login"); return; }
@@ -60,69 +41,65 @@ export default function Layout() {
   }
 
   const isPro = usuario?.plano === "PRO";
+  const trialDias = usuario?.plano === "TRIAL" && usuario?.trialExpiraEm
+    ? Math.max(0, Math.ceil((new Date(usuario.trialExpiraEm) - Date.now()) / 86400000))
+    : null;
 
-  return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside style={{
-        width: 220, background: "var(--ink)", color: "#fff",
-        display: "flex", flexDirection: "column",
-        position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 10,
-      }}>
+  function renderNavItems(onClose) {
+    return NAV.map((item) => {
+      if (item.pro && !isPro) {
+        return (
+          <div key={item.to} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px", borderRadius: 8, color: "rgba(255,255,255,.3)", fontSize: ".9rem", cursor: "not-allowed" }}>
+            <span>{item.label}</span>
+            <span style={{ marginLeft: "auto", fontSize: ".68rem", background: "var(--pro)", color: "#fff", padding: "1px 6px", borderRadius: 99 }}>Pro</span>
+          </div>
+        );
+      }
+      return (
+        <NavLink key={item.to} to={item.to} end={item.to === "/"} onClick={onClose}
+          style={({ isActive }) => ({
+            display: "flex", alignItems: "center", gap: 10, padding: "12px", borderRadius: 8,
+            color: isActive ? "#fff" : "rgba(255,255,255,.6)",
+            background: isActive ? "rgba(255,255,255,.1)" : "transparent",
+            fontSize: ".9rem", fontWeight: isActive ? 600 : 400, textDecoration: "none",
+          })}>
+          <span>{item.label}</span>
+          {item.to === "/" && alertas > 0 && (
+            <span style={{ marginLeft: "auto", background: "var(--zap)", color: "#fff", fontSize: ".72rem", fontWeight: 700, padding: "1px 7px", borderRadius: 99 }}>
+              {alertas > 99 ? "99+" : alertas}
+            </span>
+          )}
+        </NavLink>
+      );
+    });
+  }
+
+  function SidebarInner({ onClose }) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-          <Logo />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Logo />
+            {onClose && (
+              <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, padding: "0 4px" }}>x</button>
+            )}
+          </div>
           {usuario && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: ".8rem", color: "rgba(255,255,255,.5)", marginBottom: 2 }}>Lavanderia</div>
-              <div style={{ fontSize: ".9rem", fontWeight: 600, color: "#fff" }}>{usuario.lavanderia}</div>
-              <div style={{ marginTop: 6 }}>
-                <Badge status={usuario.plano} />
-              </div>
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: ".75rem", color: "rgba(255,255,255,.5)", marginBottom: 2 }}>Lavanderia</div>
+              <div style={{ fontSize: ".88rem", fontWeight: 600, color: "#fff" }}>{usuario.lavanderia}</div>
+              <div style={{ marginTop: 6 }}><Badge status={usuario.plano} /></div>
             </div>
           )}
-          <BadgeTrial usuario={usuario} />
+          {trialDias !== null && (
+            <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8, background: trialDias <= 2 ? "rgba(224,52,52,.15)" : "rgba(255,197,61,.12)", fontSize: ".78rem", color: trialDias <= 2 ? "#FCA5A5" : "#FDE68A" }}>
+              Trial: {trialDias} dia{trialDias !== 1 ? "s" : ""} restante{trialDias !== 1 ? "s" : ""}
+            </div>
+          )}
         </div>
-
-        <nav style={{ flex: 1, padding: "12px 8px" }}>
-          {NAV.map((item) => {
-            if (item.pro && !isPro) {
-              return (
-                <div key={item.to} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 12px", borderRadius: "var(--radius-sm)",
-                  color: "rgba(255,255,255,.3)", fontSize: ".9rem", cursor: "not-allowed",
-                }}>
-                  <span>{item.icone}</span>
-                  <span>{item.label}</span>
-                  <span style={{
-                    marginLeft: "auto", fontSize: ".68rem", background: "var(--pro)",
-                    color: "#fff", padding: "1px 6px", borderRadius: 99,
-                  }}>Pro</span>
-                </div>
-              );
-            }
-            return (
-              <NavLink key={item.to} to={item.to} end={item.to === "/"} style={({ isActive }) => ({
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 12px", borderRadius: "var(--radius-sm)",
-                color: isActive ? "#fff" : "rgba(255,255,255,.6)",
-                background: isActive ? "rgba(255,255,255,.1)" : "transparent",
-                fontSize: ".9rem", fontWeight: isActive ? 600 : 400,
-                textDecoration: "none", transition: "all .15s",
-              })}>
-                <span>{item.icone}</span>
-                <span>{item.label}</span>
-                {item.to === "/" && alertas > 0 && (
-                  <span style={{
-                    marginLeft: "auto", background: "var(--zap)", color: "#fff",
-                    fontSize: ".72rem", fontWeight: 700, padding: "1px 7px", borderRadius: 99,
-                    minWidth: 20, textAlign: "center",
-                  }}>{alertas > 99 ? "99+" : alertas}</span>
-                )}
-              </NavLink>
-            );
-          })}
+        <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
+          {renderNavItems(onClose)}
         </nav>
-
         <div style={{ padding: "12px 8px", borderTop: "1px solid rgba(255,255,255,.08)" }}>
           {usuario && (
             <div style={{ padding: "8px 12px", marginBottom: 4 }}>
@@ -130,18 +107,48 @@ export default function Layout() {
               <div style={{ fontSize: ".85rem", color: "rgba(255,255,255,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{usuario.nome}</div>
             </div>
           )}
-          <button onClick={sair} style={{
-            width: "100%", textAlign: "left", padding: "10px 12px",
-            background: "none", border: "none", color: "rgba(255,255,255,.4)",
-            fontSize: ".85rem", borderRadius: "var(--radius-sm)", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <span>🚪</span> Sair
+          <button onClick={sair} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", color: "rgba(255,255,255,.4)", fontSize: ".85rem", borderRadius: 8, cursor: "pointer" }}>
+            Sair
           </button>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+
+      {/* Sidebar — desktop only */}
+      <aside className="hide-mobile" style={{ width: 220, background: "var(--ink)", color: "#fff", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 10 }}>
+        <SidebarInner onClose={null} />
       </aside>
 
-      <main style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}>
+      {/* Header — mobile only */}
+      <header className="show-mobile" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: "var(--ink)", height: 56, alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
+        <Logo />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {alertas > 0 && (
+            <span style={{ background: "var(--zap)", color: "#fff", fontSize: ".72rem", fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>
+              {alertas > 99 ? "99+" : alertas}
+            </span>
+          )}
+          <button onClick={() => setMenuAberto(true)} style={{ background: "none", border: "none", color: "#fff", fontSize: "1.4rem", cursor: "pointer", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            &#9776;
+          </button>
+        </div>
+      </header>
+
+      {/* Drawer mobile */}
+      {menuAberto && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
+          <div onClick={() => setMenuAberto(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)" }} />
+          <aside style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 280, background: "var(--ink)", color: "#fff" }}>
+            <SidebarInner onClose={() => setMenuAberto(false)} />
+          </aside>
+        </div>
+      )}
+
+      <main className="main-content" style={{ flex: 1, minHeight: "100vh" }}>
         <Outlet context={{ wsEventos, usuario, setAlertas }} />
       </main>
     </div>
