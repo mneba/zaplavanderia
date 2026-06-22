@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { criarWs } from "../lib/api.js";
 import { Logo, Badge } from "../components/ui.jsx";
-import { MessageSquare, Wifi, Users, Megaphone, Settings, ImagePlay } from "lucide-react";
+import { MessageSquare, Wifi, Users, Megaphone, Settings } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Conversas", Icon: MessageSquare },
   { to: "/conexao", label: "Conexão", Icon: Wifi },
   { to: "/clientes", label: "Clientes", Icon: Users, pro: true },
   { to: "/disparo", label: "Disparo", Icon: Megaphone, pro: true },
-  { to: "/midias", label: "Mídias", Icon: ImagePlay, pro: true },
   { to: "/configuracoes", label: "Configurações", Icon: Settings },
 ];
 

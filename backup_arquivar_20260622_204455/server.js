@@ -161,7 +161,7 @@ async function aoReceberMensagem(slug, payload) {
     const conversa = await prisma.conversa.upsert({
       where: { lavanderiaId_clienteJid: { lavanderiaId: lavanderia.id, clienteJid: jid } },
       create: { lavanderiaId: lavanderia.id, clienteJid: jid, clienteNome: nome, primeiraMsg: true },
-      update: { clienteNome: nome, arquivadaEm: null },
+      update: { clienteNome: nome },
     });
     const statusAtual = await prisma.conversa.findUnique({
       where: { id: conversa.id },

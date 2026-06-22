@@ -11,16 +11,12 @@ import { painelRoutes } from "./painel.js";
 import { configRoutes } from "./config-routes.js";
 import { conexaoRoutes } from "./conexao.js";
 import { transcreverAudio } from "./audio.js";
-import { midiasRoutes } from "./midias.js";
-import FastifyMultipart from "@fastify/multipart";
-import { existsSync as fsExistsSync } from "node:fs";
 import {
   registrarCallbacks,
   iniciarTodasSessoes,
   enviarMensagem,
   verificarContato,
   baixarMidia,
-  enviarMidia,
 } from "./baileys.js";
 
 const prisma = new PrismaClient();
@@ -85,8 +81,6 @@ await app.register(cadastroRoutes);
 await app.register(painelRoutes);
 await app.register(configRoutes);
 await app.register(conexaoRoutes);
-await app.register(FastifyMultipart, { limits: { fileSize: 10 * 1024 * 1024 } });
-await app.register(midiasRoutes);
 
 // ── Fila de mensagens ─────────────────────────────────────────
 const filas = new Map();
@@ -99,17 +93,15 @@ function enfileirar(chave, tarefa) {
 
 // ── Callbacks do Baileys ──────────────────────────────────────
 async function aoReceberMensagem(slug, payload) {
-  const { jid, nome, tipo, texto, mimetype, numeroReal, msgRaw } = payload;
+  const { jid, nome, tipo, texto, mimetype, msgRaw } = payload;
+
   const lavanderia = await prisma.lavanderia.findUnique({ where: { slug } });
   if (!lavanderia || !lavanderia.ativa) return;
   if (lavanderia.plano === "EXPIRADO") return;
   if (lavanderia.plano === "TRIAL" && lavanderia.trialExpiraEm && new Date() > lavanderia.trialExpiraEm) return;
 
   const config = lavanderia.config || {};
-  // Se eh @lid, o jid nao tem numero real. Pega do senderPn quando disponivel.
-  const ehLid = jid.endsWith("@lid");
-  const numeroDeContato = numeroReal || (ehLid ? null : jid.replace("@s.whatsapp.net", ""));
-  const numeroCliente = numeroDeContato || jid.replace("@s.whatsapp.net", "").replace("@lid", "");
+  const numeroCliente = jid.replace("@s.whatsapp.net", "").replace("@lid", "");
 
   // Ignora contatos da agenda se numero pessoal
   if (config.numeroTipo === "pessoal") {
@@ -161,15 +153,14 @@ async function aoReceberMensagem(slug, payload) {
     const conversa = await prisma.conversa.upsert({
       where: { lavanderiaId_clienteJid: { lavanderiaId: lavanderia.id, clienteJid: jid } },
       create: { lavanderiaId: lavanderia.id, clienteJid: jid, clienteNome: nome, primeiraMsg: true },
-      update: { clienteNome: nome, arquivadaEm: null },
+      update: { clienteNome: nome },
     });
     const statusAtual = await prisma.conversa.findUnique({
       where: { id: conversa.id },
-      select: { status: true, primeiraMsg: true, botResetadoEm: true },
+      select: { status: true, primeiraMsg: true },
     });
     conversa.status = statusAtual.status;
     conversa.primeiraMsg = statusAtual.primeiraMsg;
-    conversa.botResetadoEm = statusAtual.botResetadoEm;
 
     // Boas-vindas
     if (conversa.primeiraMsg && config.mensagemBoasVindas) {
@@ -183,9 +174,8 @@ async function aoReceberMensagem(slug, payload) {
       data: { conversaId: conversa.id, autor: "CLIENTE", texto: prefixoExibicao + textoFinal },
     });
     app.notificarWs(lavanderia.id, { tipo: "NOVA_MENSAGEM", conversaId: conversa.id, mensagem: msg, clienteNome: nome });
-    if (conversa.status === "HUMANO") {
-      return;
-    }
+
+    if (conversa.status === "HUMANO") return;
 
     // ====== Imagem/video: escalada direta sem chamar IA ======
     if (tipo === "imagem" || tipo === "video") {
@@ -195,7 +185,7 @@ async function aoReceberMensagem(slug, payload) {
         try { await enviarMensagem(slug, jid, aviso); } catch {}
         await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: aviso } });
         await prisma.conversa.update({ where: { id: conversa.id }, data: { status: "HUMANO" } });
-        await notificarDono(lavanderia, conversa, nome, textoFinal, slug, numeroDeContato);
+        await notificarDono(lavanderia, conversa, nome, textoFinal, slug);
         app.notificarWs(lavanderia.id, { tipo: "CONVERSA_ATUALIZADA", conversaId: conversa.id, status: "HUMANO" });
       } else {
         const aviso = `Recebi sua ${tipo === "imagem" ? "imagem" : "video"}, mas no momento nao consigo analisa-la. Pode me contar em texto o que voce precisa?`;
@@ -206,70 +196,22 @@ async function aoReceberMensagem(slug, payload) {
     }
 
     // ====== Fluxo IA normal (texto ou audio transcrito) ======
-    // Filtra historico: apenas mensagens depois do ultimo "devolver ao bot"
-    const filtroHist = conversa.botResetadoEm
-      ? { conversaId: conversa.id, criadaEm: { gt: conversa.botResetadoEm } }
-      : { conversaId: conversa.id };
     const historico = await prisma.mensagem.findMany({
-      where: filtroHist,
+      where: { conversaId: conversa.id },
       orderBy: { criadaEm: "asc" },
       take: 40,
     });
-    // Carrega midias ativas pra IA poder anexar
-    const midias = await prisma.midiaResposta.findMany({
-      where: { lavanderiaId: lavanderia.id, ativa: true },
-    });
 
-    let resposta, precisaHumano, midiaId;
-    try {
-      const r = await gerarResposta(lavanderia, historico, midias);
-      resposta = r.texto;
-      precisaHumano = r.precisaHumano;
-      midiaId = r.midiaId;
-    } catch (e) {
-      console.log(`[${slug}] ERRO gerarResposta: ${e.message}`);
-      app.log.error({ err: e.message, slug }, "falha gerarResposta");
-      return;
-    }
+    const { texto: resposta, precisaHumano } = await gerarResposta(lavanderia, historico);
+    if (!resposta) return;
 
-    // Texto final a enviar (mensagem padrao se IA escala sem texto)
-    let respostaParaEnviar = resposta;
-    if (precisaHumano && !resposta) {
-      respostaParaEnviar = "Um momento, vou chamar um atendente pra te ajudar 👍";
-    }
+    try { await enviarMensagem(slug, jid, resposta); } catch {}
+    const msgBot = await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: resposta } });
+    app.notificarWs(lavanderia.id, { tipo: "NOVA_MENSAGEM", conversaId: conversa.id, mensagem: msgBot });
 
-    if (!respostaParaEnviar && !midiaId) return;
-
-    // 1) Envia texto
-    if (respostaParaEnviar) {
-      try { await enviarMensagem(slug, jid, respostaParaEnviar); }
-      catch (e) { console.log(`[${slug}] ERRO enviarMensagem: ${e.message}`); }
-      const msgBot = await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: respostaParaEnviar } });
-      app.notificarWs(lavanderia.id, { tipo: "NOVA_MENSAGEM", conversaId: conversa.id, mensagem: msgBot });
-    }
-
-    // 2) Envia midia se IA pediu
-    if (midiaId) {
-      const midia = midias.find((m) => m.id === midiaId);
-      if (midia && fsExistsSync(midia.arquivo)) {
-        try {
-          await enviarMidia(slug, jid, midia.arquivo, midia.tipo, midia.legenda);
-          const emoji = midia.tipo === "imagem" ? "📷" : "🎥";
-          const label = `${emoji} ${midia.nome}${midia.legenda ? ` — "${midia.legenda}"` : ""}`;
-          const msgMidia = await prisma.mensagem.create({ data: { conversaId: conversa.id, autor: "BOT", texto: label } });
-          app.notificarWs(lavanderia.id, { tipo: "NOVA_MENSAGEM", conversaId: conversa.id, mensagem: msgMidia });
-        } catch (e) {
-          app.log.error({ err: e.message, slug, midiaId }, "falha ao enviar midia");
-        }
-      } else {
-        app.log.warn({ midiaId, slug }, "IA pediu midia inexistente ou arquivo ausente");
-      }
-    }
-
-    // 3) Escala se precisa humano
     if (precisaHumano) {
       await prisma.conversa.update({ where: { id: conversa.id }, data: { status: "HUMANO" } });
-      await notificarDono(lavanderia, conversa, nome, textoFinal, slug, numeroDeContato);
+      await notificarDono(lavanderia, conversa, nome, textoFinal, slug);
       app.notificarWs(lavanderia.id, { tipo: "CONVERSA_ATUALIZADA", conversaId: conversa.id, status: "HUMANO" });
     }
   });
@@ -297,20 +239,14 @@ registrarCallbacks({
 });
 
 // ── Helpers ───────────────────────────────────────────────────
-async function notificarDono(lavanderia, conversa, nomeCliente, ultimaMsg, slug, numeroDeContato) {
+async function notificarDono(lavanderia, conversa, nomeCliente, ultimaMsg, slug) {
   if (!lavanderia.donoFone) return;
-  // Monta linha de contato apenas se temos um numero real (nao @lid)
-  let linhaContato = "";
-  if (numeroDeContato && /^\d{10,15}$/.test(numeroDeContato)) {
-    linhaContato = `Numero: wa.me/${numeroDeContato}\n`;
-  } else {
-    linhaContato = "Numero: oculto pelo WhatsApp (responda pelo painel)\n";
-  }
+  const numeroCliente = conversa.clienteJid.replace("@s.whatsapp.net", "");
   const aviso =
     `🚨 *Atendimento humano solicitado — ${lavanderia.nome}*\n\n` +
     `Cliente: ${nomeCliente}\n` +
-    linhaContato +
-    `Ultima mensagem: "${ultimaMsg.slice(0, 200)}"\n\n` +
+    `Número: wa.me/${numeroCliente}\n` +
+    `Última mensagem: "${ultimaMsg.slice(0, 200)}"\n\n` +
     `Acesse o painel: https://app.zaplavanderia.com.br`;
   try { await enviarMensagem(slug, lavanderia.donoFone, aviso); }
   catch (e) { app.log.error({ err: e.message }, "falha ao notificar dono"); }

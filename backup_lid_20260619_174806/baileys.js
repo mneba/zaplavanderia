@@ -10,7 +10,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { toDataURL } from "qrcode";
 import pino from "pino";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 const SESSOES_DIR = process.env.SESSOES_DIR || "/data/sessoes";
@@ -112,16 +112,11 @@ export async function iniciarSessao(slug) {
       for (const msg of messages) {
         if (msg.key.fromMe) continue;
         const jid = msg.key.remoteJid;
-        if (!jid?.endsWith("@s.whatsapp.net") && !jid?.endsWith("@lid")) {
-          continue;
-        }
+        if (!jid?.endsWith("@s.whatsapp.net") && !jid?.endsWith("@lid")) continue;
         const nome = msg.pushName || "Cliente";
         const analise = analisarMensagem(msg);
-        if (!analise) {
-          continue;
-        }
-        const numeroReal = msg.key.senderPn || msg.key.participantPn || null;
-        onMensagem?.(slug, { jid, nome, numeroReal, ...analise, msgRaw: msg });
+        if (!analise) continue;
+        onMensagem?.(slug, { jid, nome, ...analise, msgRaw: msg });
       }
     });
 
@@ -156,23 +151,6 @@ export async function enviarMensagem(slug, numero, texto) {
   }
   const jid = numero.includes('@') ? numero : `${numero}@s.whatsapp.net`;
   await s.sock.sendMessage(jid, { text: texto });
-}
-
-export async function enviarMidia(slug, numero, arquivoPath, tipo, legenda) {
-  const s = sessoes.get(slug);
-  if (!s?.sock || s.estado !== "open") {
-    throw new Error(`Sessao ${slug} nao esta conectada`);
-  }
-  const jid = numero.includes('@') ? numero : `${numero}@s.whatsapp.net`;
-  const buffer = readFileSync(arquivoPath);
-  const payload = legenda ? { caption: legenda } : {};
-  if (tipo === "imagem") {
-    await s.sock.sendMessage(jid, { image: buffer, ...payload });
-  } else if (tipo === "video") {
-    await s.sock.sendMessage(jid, { video: buffer, ...payload });
-  } else {
-    throw new Error(`Tipo desconhecido: ${tipo}`);
-  }
 }
 
 export async function baixarMidia(slug, msgRaw) {

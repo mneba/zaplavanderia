@@ -39,7 +39,6 @@ export const api = {
   conversa: (id) => req("GET", `/painel/conversas/${id}`),
   assumir: (id) => req("POST", `/painel/conversas/${id}/assumir`, {}),
   liberar: (id) => req("POST", `/painel/conversas/${id}/liberar`, {}),
-  resetar: (id) => req("POST", `/painel/conversas/${id}/resetar`, {}),
   responder: (id, texto) => req("POST", `/painel/conversas/${id}/responder`, { texto }),
 
   // Clientes e disparo
@@ -52,22 +51,6 @@ export const api = {
   salvarConfig: (config) => req("PUT", "/config", config),
   previewConfig: (config) => req("POST", "/config/preview", config),
 
-  // Midias
-  listarMidias: () => req("GET", "/config/midias"),
-  criarMidia: async (formData) => {
-    const res = await fetch(`${BASE}/config/midias`, {
-      method: "POST",
-      headers: { ...(localStorage.getItem("zap_token") ? { Authorization: `Bearer ${localStorage.getItem("zap_token")}` } : {}) },
-      body: formData,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.erro || "Erro no upload");
-    return data;
-  },
-  atualizarMidia: (id, dados) => req("PATCH", `/config/midias/${id}`, dados),
-  deletarMidia: (id) => req("DELETE", `/config/midias/${id}`),
-  midiaArquivoUrl: (id) => `${BASE}/config/midias/${id}/arquivo?token=${localStorage.getItem("zap_token")}`,
-
   // Conexão WhatsApp
   statusConexao: () => req("GET", "/conexao/status"),
   gerarQr: () => req("GET", "/conexao/qr"),
@@ -78,41 +61,14 @@ export const api = {
 export function criarWs(onMensagem) {
   const t = token();
   if (!t) return null;
-
-  let ws = null;
-  let reconectTimer = null;
-  let tentativa = 0;
-  let fechado = false;
-
-  function conectar() {
-    if (fechado) return;
-    const url = `${window.location.origin.replace("http", "ws")}/api/painel/ws?token=${t}`;
-    ws = new WebSocket(url);
-
-    ws.onopen = () => {
-      tentativa = 0;
-      onMensagem({ tipo: "__WS_CONECTADO__" });
-    };
-    ws.onmessage = (e) => {
-      try { onMensagem(JSON.parse(e.data)); } catch {}
-    };
-    ws.onerror = () => {};
-    ws.onclose = () => {
-      if (fechado) return;
-      // Backoff exponencial: 1s, 2s, 4s, 8s, 16s, max 30s
-      const delay = Math.min(1000 * Math.pow(2, tentativa), 30000);
-      tentativa += 1;
-      reconectTimer = setTimeout(conectar, delay);
-    };
-  }
-
-  conectar();
-
-  return {
-    close: () => {
-      fechado = true;
-      if (reconectTimer) clearTimeout(reconectTimer);
-      if (ws) ws.close();
-    },
+  const wsBase = BASE.replace(/^http/, "ws").replace(/^\/api/, "");
+  const wsUrl = wsBase
+    ? `${wsBase}/api/painel/ws?token=${t}`
+    : `/api/painel/ws?token=${t}`;
+  const ws = new WebSocket(`${window.location.origin.replace("http", "ws")}/api/painel/ws?token=${t}`);
+  ws.onmessage = (e) => {
+    try { onMensagem(JSON.parse(e.data)); } catch {}
   };
+  ws.onerror = () => {};
+  return ws;
 }

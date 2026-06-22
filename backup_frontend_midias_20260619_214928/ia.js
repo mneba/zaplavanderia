@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { montarSecaoItens } from "./itens-prompt.js";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.AI_MODEL || "claude-haiku-4-5";
@@ -80,7 +79,6 @@ ${c.observacoesPagamento ? `Obs: ${c.observacoesPagamento}` : ""}
 
 # Politica de reembolso
 ${c.politicaReembolso || "Reembolsos pelo suporte."}
-${montarSecaoItens(c.itensLavagem)}
 
 # Perguntas frequentes
 ${faq || "Responda com base nas informacoes acima."}
@@ -114,6 +112,7 @@ Como usar a tag:
 }
 
 export async function gerarResposta(lavanderia, historicoMensagens, midias = []) {
+  console.log(`[ia] gerarResposta: ${midias.length} midias, ${historicoMensagens.length} msgs historico`);
   const mensagensRecentes = historicoMensagens.slice(-MAX_HISTORICO);
 
   const messages = [];
@@ -129,10 +128,14 @@ export async function gerarResposta(lavanderia, historicoMensagens, midias = [])
 
   while (messages.length && messages[0].role !== "user") messages.shift();
   if (!messages.length) return { texto: null, precisaHumano: false, midiaId: null };
+
+  const sys = montarSystemPrompt(lavanderia, midias);
+  console.log(`[ia] PROMPT FINAL (ultimos 1200 chars): ${sys.slice(-1200)}`);
+  console.log(`[ia] MSGS PRA IA: ${JSON.stringify(messages).slice(0, 800)}`);
   const resposta = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 500,
-    system: montarSystemPrompt(lavanderia, midias),
+    system: sys,
     messages,
     stream: false,
   });
@@ -145,6 +148,8 @@ export async function gerarResposta(lavanderia, historicoMensagens, midias = [])
 
   const precisaHumano = texto.includes("[HUMANO]");
   texto = texto.replace("[HUMANO]", "").trim();
+
+  console.log(`[ia] RAW: ${texto.slice(0, 400)}`);
   let midiaId = null;
   const matchMidia = texto.match(/\[MIDIA:([a-z0-9]+)\]/i);
   if (matchMidia) {

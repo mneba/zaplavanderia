@@ -1,23 +1,24 @@
-// Gerenciador de sessoes Baileys - multi-tenant
-// Cada lavanderia tem sua propria sessao persistida em /data/sessoes/<slug>/
+// Gerenciador de sessões Baileys — multi-tenant
+// Cada lavanderia tem sua própria sessão persistida em /data/sessoes/<slug>/
 
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
-  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
 import { toDataURL } from "qrcode";
 import pino from "pino";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 const SESSOES_DIR = process.env.SESSOES_DIR || "/data/sessoes";
 const logger = pino({ level: "warn" });
 
+// Mapa de sessões ativas: slug → { sock, status, qr }
 const sessoes = new Map();
 
+// Callbacks registrados pelo server.js
 let onMensagem = null;
 let onStatusChange = null;
 let onQrCode = null;
@@ -42,8 +43,8 @@ export function statusSessao(slug) {
 export async function iniciarSessao(slug) {
   if (sessoes.has(slug)) {
     const s = sessoes.get(slug);
-    if (s.estado === "open") return;
-    if (s.iniciando) return;
+    if (s.estado === "open") return; // já conectada
+    if (s.iniciando) return; // já tentando
   }
 
   const dir = join(SESSOES_DIR, slug);
@@ -74,6 +75,7 @@ export async function iniciarSessao(slug) {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        // Converte QR pra imagem base64 e notifica o painel
         const qrBase64 = await toDataURL(qr);
         sessoes.set(slug, { ...sessoes.get(slug), qr: qrBase64, estado: "qr" });
         onQrCode?.(slug, qrBase64);
@@ -85,7 +87,7 @@ export async function iniciarSessao(slug) {
         const perfil = sock.user?.name || null;
         sessoes.set(slug, { sock, estado: "open", numero, perfil, iniciando: false });
         onStatusChange?.(slug, "open", { numero, perfil });
-        console.log(`[${slug}] WhatsApp conectado - +${numero}`);
+        console.log(`✅ [${slug}] WhatsApp conectado — +${numero}`);
       }
 
       if (connection === "close") {
@@ -93,15 +95,17 @@ export async function iniciarSessao(slug) {
         const deslogado = codigo === DisconnectReason.loggedOut;
         sessoes.set(slug, { estado: "close", iniciando: false });
         onStatusChange?.(slug, "close");
-        console.log(`[${slug}] Conexao fechada (${codigo}). Deslogado: ${deslogado}`);
+        console.log(`⚠️ [${slug}] Conexão fechada (${codigo}). Deslogado: ${deslogado}`);
 
         if (deslogado) {
+          // Limpa sessão corrompida do disco automaticamente
           try {
             const { rmSync } = await import("node:fs");
             rmSync(dir, { recursive: true, force: true });
-            console.log(`[${slug}] Sessao corrompida removida automaticamente`);
+            console.log(`🗑️ [${slug}] Sessão corrompida removida automaticamente`);
           } catch {}
         } else {
+          // Reconecta após 5 segundos
           setTimeout(() => iniciarSessao(slug), 5000);
         }
       }
@@ -112,22 +116,16 @@ export async function iniciarSessao(slug) {
       for (const msg of messages) {
         if (msg.key.fromMe) continue;
         const jid = msg.key.remoteJid;
-        if (!jid?.endsWith("@s.whatsapp.net") && !jid?.endsWith("@lid")) {
-          continue;
-        }
+        if (!jid?.endsWith("@s.whatsapp.net") && !jid?.endsWith("@lid")) continue;
+        const texto = extrairTexto(msg.message);
         const nome = msg.pushName || "Cliente";
-        const analise = analisarMensagem(msg);
-        if (!analise) {
-          continue;
-        }
-        const numeroReal = msg.key.senderPn || msg.key.participantPn || null;
-        onMensagem?.(slug, { jid, nome, numeroReal, ...analise, msgRaw: msg });
+        if (texto) onMensagem?.(slug, { jid, texto, nome });
       }
     });
 
     sessoes.set(slug, { sock, estado: "connecting", iniciando: true });
   } catch (e) {
-    console.error(`[${slug}] Erro ao iniciar sessao:`, e.message);
+    console.error(`❌ [${slug}] Erro ao iniciar sessão:`, e.message);
     sessoes.set(slug, { estado: "error", iniciando: false });
     onStatusChange?.(slug, "error");
   }
@@ -135,15 +133,18 @@ export async function iniciarSessao(slug) {
 
 export async function desconectarSessao(slug) {
   const s = sessoes.get(slug);
+  // Tenta logout gracioso
   if (s?.sock) {
     try { await s.sock.logout(); } catch {}
     try { s.sock.end(); } catch {}
   }
+  // Limpa sessão do disco
   try {
     const { rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
     const dir = join(process.env.SESSOES_DIR || "/data/sessoes", slug);
     rmSync(dir, { recursive: true, force: true });
-    console.log(`[${slug}] Sessao removida`);
+    console.log(`🗑️ [${slug}] Sessão removida`);
   } catch {}
   sessoes.delete(slug);
   onStatusChange?.(slug, "close");
@@ -152,38 +153,14 @@ export async function desconectarSessao(slug) {
 export async function enviarMensagem(slug, numero, texto) {
   const s = sessoes.get(slug);
   if (!s?.sock || s.estado !== "open") {
-    throw new Error(`Sessao ${slug} nao esta conectada`);
+    throw new Error(`Sessão ${slug} não está conectada`);
   }
+
+  // Mantém JID original — Baileys lida com @lid nativamente
   const jid = numero.includes('@') ? numero : `${numero}@s.whatsapp.net`;
+  const delay = Math.min(Math.max(texto.length * 40, 1200), 5000);
+
   await s.sock.sendMessage(jid, { text: texto });
-}
-
-export async function enviarMidia(slug, numero, arquivoPath, tipo, legenda) {
-  const s = sessoes.get(slug);
-  if (!s?.sock || s.estado !== "open") {
-    throw new Error(`Sessao ${slug} nao esta conectada`);
-  }
-  const jid = numero.includes('@') ? numero : `${numero}@s.whatsapp.net`;
-  const buffer = readFileSync(arquivoPath);
-  const payload = legenda ? { caption: legenda } : {};
-  if (tipo === "imagem") {
-    await s.sock.sendMessage(jid, { image: buffer, ...payload });
-  } else if (tipo === "video") {
-    await s.sock.sendMessage(jid, { video: buffer, ...payload });
-  } else {
-    throw new Error(`Tipo desconhecido: ${tipo}`);
-  }
-}
-
-export async function baixarMidia(slug, msgRaw) {
-  const s = sessoes.get(slug);
-  if (!s?.sock) throw new Error(`Sessao ${slug} nao esta conectada`);
-  return await downloadMediaMessage(
-    msgRaw,
-    "buffer",
-    {},
-    { logger, reuploadRequest: s.sock.updateMediaMessage }
-  );
 }
 
 export async function verificarContato(slug, numero) {
@@ -202,23 +179,20 @@ export async function iniciarTodasSessoes(prisma) {
     where: { ativa: true, plano: { not: "EXPIRADO" } },
     select: { slug: true },
   });
-  console.log(`Iniciando ${lavanderias.length} sessoes...`);
+  console.log(`🔌 Iniciando ${lavanderias.length} sessões...`);
   for (const lav of lavanderias) {
     await iniciarSessao(lav.slug);
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000)); // evita sobrecarga
   }
 }
 
-function analisarMensagem(msg) {
-  const m = msg.message;
-  if (!m) return null;
-
-  const textoConv = m.conversation || m.extendedTextMessage?.text;
-  if (textoConv) return { tipo: "texto", texto: textoConv };
-
-  if (m.audioMessage) return { tipo: "audio", texto: null, mimetype: m.audioMessage.mimetype };
-  if (m.imageMessage) return { tipo: "imagem", texto: m.imageMessage.caption || null };
-  if (m.videoMessage) return { tipo: "video", texto: m.videoMessage.caption || null };
-
-  return null;
+function extrairTexto(message) {
+  if (!message) return null;
+  return (
+    message.conversation ||
+    message.extendedTextMessage?.text ||
+    message.imageMessage?.caption ||
+    message.videoMessage?.caption ||
+    null
+  );
 }

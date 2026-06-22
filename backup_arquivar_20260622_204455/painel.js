@@ -26,7 +26,7 @@ export async function painelRoutes(app) {
     const take = 30;
     const skip = (Number(pagina) - 1) * take;
 
-    const where = { lavanderiaId, arquivadaEm: null, ...(status ? { status } : {}) };
+    const where = { lavanderiaId, ...(status ? { status } : {}) };
     const [conversas, total] = await Promise.all([
       app.prisma.conversa.findMany({
         where,
@@ -106,7 +106,7 @@ export async function painelRoutes(app) {
     if (!conversa) return reply.status(404).send({ erro: "Conversa não encontrada" });
     await app.prisma.conversa.update({
       where: { id: conversa.id },
-      data: { botResetadoEm: new Date(), arquivadaEm: new Date() },
+      data: { botResetadoEm: new Date() },
     });
     return { ok: true };
   });
@@ -155,7 +155,7 @@ export async function painelRoutes(app) {
     if (plano !== "PRO") return reply.status(403).send({ erro: "Recurso exclusivo do Plano Pro" });
 
     const conversas = await app.prisma.conversa.findMany({
-      where: { lavanderiaId, arquivadaEm: null },
+      where: { lavanderiaId },
       orderBy: { atualizadaEm: "desc" },
       select: {
         id: true,

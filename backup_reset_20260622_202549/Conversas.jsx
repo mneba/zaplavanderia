@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { Btn, Spinner, useToast } from "../components/ui.jsx";
-import { MoreVertical, RotateCcw } from "lucide-react";
 
 function avatarLetra(nome) {
   return (nome || "?")[0].toUpperCase();
@@ -28,13 +27,12 @@ function BolhaMensagem({ msg }) {
   );
 }
 
-function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar, onArquivada }) {
+function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar }) {
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [statusLocal, setStatusLocal] = useState(conversa.status);
-  const [menuAcoesAberto, setMenuAcoesAberto] = useState(false);
   const fimRef = useRef(null);
 
   useEffect(() => { setStatusLocal(conversa.status); }, [conversa.id]);
@@ -79,17 +77,6 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar, on
     catch (e) { toast.show(e.message, "error"); }
   }
 
-  async function resetar() {
-    if (!confirm("Arquivar essa conversa? Ela sai da lista, mas o histórico fica salvo. Se o cliente voltar a mandar mensagem, a conversa reabre automaticamente com contexto novo.")) return;
-    try {
-      await api.resetar(conversa.id);
-      toast.show("Conversa arquivada");
-      setMenuAcoesAberto(false);
-      onArquivada?.();
-      onAtualizar?.();
-    } catch (e) { toast.show(e.message, "error"); }
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Header */}
@@ -105,39 +92,6 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar, on
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: ".92rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conversa.clienteNome}</div>
           <div style={{ fontSize: ".72rem", color: "var(--ink-muted)" }}>{statusLocal === "BOT" ? "Bot respondendo" : "Voce atendendo"}</div>
-        </div>
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <button
-            onClick={() => setMenuAcoesAberto((v) => !v)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 6, borderRadius: 6, display: "flex", alignItems: "center" }}
-            title="Mais ações"
-          >
-            <MoreVertical size={18} />
-          </button>
-          {menuAcoesAberto && (
-            <>
-              <div onClick={() => setMenuAcoesAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
-              <div style={{
-                position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 51,
-                background: "#fff", border: "1px solid var(--border)", borderRadius: 8,
-                boxShadow: "var(--shadow)", minWidth: 200, padding: 4,
-              }}>
-                <button
-                  onClick={resetar}
-                  style={{
-                    width: "100%", textAlign: "left", padding: "10px 12px",
-                    background: "none", border: "none", cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: 8, fontSize: ".88rem",
-                    color: "var(--ink)", borderRadius: 4,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
-                >
-                  <RotateCcw size={14} /> Resetar contexto
-                </button>
-              </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -327,7 +281,6 @@ export default function Conversas() {
             toast={toast}
             wsEventos={wsEventos}
             onVoltar={() => setMobileDetalhe(false)}
-            onArquivada={() => { setSelecionada(null); setMobileDetalhe(false); }}
           />
         ) : (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--ink-soft)", flexDirection: "column", gap: 8 }}>

@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { criarWs } from "../lib/api.js";
 import { Logo, Badge } from "../components/ui.jsx";
-import { MessageSquare, Wifi, Users, Megaphone, Settings, ImagePlay } from "lucide-react";
+import { MessageSquare, Wifi, Users, Megaphone, Settings } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Conversas", Icon: MessageSquare },
   { to: "/conexao", label: "Conexão", Icon: Wifi },
   { to: "/clientes", label: "Clientes", Icon: Users, pro: true },
   { to: "/disparo", label: "Disparo", Icon: Megaphone, pro: true },
-  { to: "/midias", label: "Mídias", Icon: ImagePlay, pro: true },
   { to: "/configuracoes", label: "Configurações", Icon: Settings },
 ];
 
@@ -85,13 +84,14 @@ export default function Layout() {
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <Logo size="md" />
+            <Logo size="lg" />
             {onClose && (
               <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, padding: "0 4px" }}>x</button>
             )}
           </div>
           {usuario && (
             <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: ".75rem", color: "rgba(255,255,255,.5)", marginBottom: 2 }}>Lavanderia</div>
               <div style={{ fontSize: ".88rem", fontWeight: 600, color: "#fff" }}>{usuario.lavanderia}</div>
               <div style={{ marginTop: 6 }}><Badge status={usuario.plano} /></div>
             </div>
@@ -130,7 +130,7 @@ export default function Layout() {
 
       {/* Header — mobile only */}
       <header className="show-mobile" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: "var(--ink)", height: 56, alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
-        <Logo size="sm" />
+        <Logo variant="mark" size="md" />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {alertas > 0 && (
             <span style={{ background: "var(--zap)", color: "#fff", fontSize: ".72rem", fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>

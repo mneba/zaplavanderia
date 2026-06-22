@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { montarSecaoItens } from "./itens-prompt.js";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.AI_MODEL || "claude-haiku-4-5";
@@ -80,7 +79,6 @@ ${c.observacoesPagamento ? `Obs: ${c.observacoesPagamento}` : ""}
 
 # Politica de reembolso
 ${c.politicaReembolso || "Reembolsos pelo suporte."}
-${montarSecaoItens(c.itensLavagem)}
 
 # Perguntas frequentes
 ${faq || "Responda com base nas informacoes acima."}

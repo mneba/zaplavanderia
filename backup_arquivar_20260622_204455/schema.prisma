@@ -56,7 +56,6 @@ model Conversa {
   status       StatusConversa @default(BOT)
   primeiraMsg  Boolean        @default(true)
   botResetadoEm DateTime?
-  arquivadaEm   DateTime?
   criadaEm     DateTime       @default(now())
   atualizadaEm DateTime       @updatedAt
 

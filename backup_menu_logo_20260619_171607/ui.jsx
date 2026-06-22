@@ -1,44 +1,12 @@
 import { useState } from "react";
 
 // ── Logo ──────────────────────────────────────────────────────
-export function Logo({ size = "md", variant = "full", onDark = true }) {
-  const heights = { sm: 26, md: 30, lg: 34 };
-  const fontSizes = { sm: ".9rem", md: "1.02rem", lg: "1.15rem" };
-  const height = heights[size] || heights.md;
-  const fontSize = fontSizes[size] || fontSizes.md;
-  const imgFilter = onDark ? "brightness(0) invert(1)" : "none";
-  const textColor = onDark ? "#fff" : "var(--ink)";
-
-  const img = (
-    <img
-      src="/logo-mark.png"
-      alt="ZapLavanderia"
-      style={{
-        height,
-        width: "auto",
-        display: "block",
-        objectFit: "contain",
-        filter: imgFilter,
-        flexShrink: 0,
-      }}
-    />
-  );
-
-  if (variant === "mark") return img;
-
+export function Logo({ size = "md" }) {
+  const s = size === "sm" ? "1rem" : "1.25rem";
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      {img}
-      <span style={{
-        fontFamily: "var(--display)",
-        fontWeight: 800,
-        fontSize,
-        color: textColor,
-        letterSpacing: "-0.01em",
-        whiteSpace: "nowrap",
-      }}>
-        ZapLavanderia
-      </span>
+    <span style={{ fontFamily: "var(--display)", fontWeight: 800, fontSize: s, display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--zap)", boxShadow: "0 0 0 3px rgba(29,171,84,.2)", flexShrink: 0 }} />
+      Zap<span style={{ color: "var(--turq-deep)" }}>Lavanderia</span>
     </span>
   );
 }

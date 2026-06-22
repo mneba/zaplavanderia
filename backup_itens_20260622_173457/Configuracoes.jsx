@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api.js";
 import { Btn, Spinner, useToast, Card } from "../components/ui.jsx";
-import { ITENS_CANONICOS } from "../lib/itensLavagem.js";
 
 // ── Constantes ────────────────────────────────────────────────
 const FRANQUIAS = [
@@ -122,55 +121,6 @@ function Textarea({ value, onChange, placeholder, rows = 3 }) {
 }
 
 // ── Página principal ──────────────────────────────────────────
-function ItemLavagem({ label, status, obs, onChange }) {
-  const opcoes = [
-    { v: "aceita", l: "Aceita", c: "#1DAB54" },
-    { v: "restricao", l: "Com restrição", c: "#F59E0B" },
-    { v: "nao_aceita", l: "Não aceita", c: "#E03434" },
-    { v: null, l: "Não configurado", c: "#8AACB4" },
-  ];
-  return (
-    <div style={{ padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-      <div style={{ fontWeight: 600, fontSize: ".88rem", marginBottom: 6 }}>{label}</div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {opcoes.map((op) => {
-          const ativo = status === op.v;
-          return (
-            <button
-              key={op.v || "none"}
-              onClick={() => onChange(op.v, ativo ? obs : (op.v === status ? obs : ""))}
-              style={{
-                padding: "5px 10px",
-                fontSize: ".78rem",
-                borderRadius: 6,
-                border: ativo ? `2px solid ${op.c}` : "1px solid var(--border)",
-                background: ativo ? `${op.c}22` : "#fff",
-                color: ativo ? op.c : "var(--ink-soft)",
-                cursor: "pointer",
-                fontWeight: ativo ? 700 : 400,
-              }}
-            >
-              {op.l}
-            </button>
-          );
-        })}
-      </div>
-      {(status === "restricao" || status === "nao_aceita") && (
-        <input
-          value={obs || ""}
-          onChange={(e) => onChange(status, e.target.value)}
-          placeholder={status === "restricao" ? "Detalhe a restrição..." : "Motivo (opcional)"}
-          style={{
-            marginTop: 8, width: "100%",
-            border: "1.5px solid var(--border)", borderRadius: 8,
-            padding: "8px 12px", fontSize: ".86rem", outline: "none",
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 export default function Configuracoes() {
   const [nome, setNome] = useState("");
   const [config, setConfig] = useState(CONFIG_VAZIA);
@@ -189,20 +139,6 @@ export default function Configuracoes() {
       }
     }).finally(() => setLoading(false));
   }, []);
-
-
-  // Quando carrega config sem itens, popula com defaults razoaveis
-  useEffect(() => {
-    if (!config) return;
-    const existentes = config.itensLavagem || [];
-    if (existentes.length < ITENS_CANONICOS.length) {
-      const completos = ITENS_CANONICOS.map((meta) => {
-        const exist = existentes.find((e) => e.id === meta.id);
-        return exist || { id: meta.id, status: meta.defaultStatus, obs: meta.defaultObs || null };
-      });
-      set("itensLavagem", completos);
-    }
-  }, [config?.itensLavagem?.length]);
 
   function set(campo, valor) {
     setConfig((c) => ({ ...c, [campo]: valor }));
@@ -285,20 +221,6 @@ export default function Configuracoes() {
   }
 
   // ── Escalações ───────────────────────────────────────────
-
-  function atualizarItemLavagem(id, status, obs) {
-    const itens = config.itensLavagem || [];
-    const existe = itens.find((i) => i.id === id);
-    let novos;
-    if (existe) {
-      novos = itens.map((i) => i.id === id ? { ...i, status, obs: obs || null } : i);
-    } else {
-      novos = [...itens, { id, status, obs: obs || null }];
-    }
-    set("itensLavagem", novos);
-  }
-
-
   function toggleEscalacao(id) {
     const lista = config.escalacoes.includes(id)
       ? config.escalacoes.filter((x) => x !== id)
@@ -466,23 +388,7 @@ export default function Configuracoes() {
       </Secao>
 
       {/* 4. FAQ */}
-      <Secao titulo="4. O que aceita lavar" desc="Marque quais itens sua lavanderia aceita. O bot consulta essa lista para responder qualquer pergunta sobre lavagem.">
-        {ITENS_CANONICOS.map((item) => {
-          const existente = (config.itensLavagem || []).find((i) => i.id === item.id);
-          const atual = existente || { status: item.defaultStatus, obs: item.defaultObs };
-          return (
-            <ItemLavagem
-              key={item.id}
-              label={item.label}
-              status={atual.status}
-              obs={atual.obs}
-              onChange={(status, obs) => atualizarItemLavagem(item.id, status, obs)}
-            />
-          );
-        })}
-      </Secao>
-
-      <Secao titulo="5. Perguntas frequentes" desc="O bot usa essas respostas quando o cliente perguntar algo específico.">
+      <Secao titulo="4. Perguntas frequentes" desc="O bot usa essas respostas quando o cliente perguntar algo específico.">
         {config.faq.map((f, i) => (
           <div key={i} style={{
             border: "1.5px solid var(--border)", borderRadius: 10, padding: 16, marginBottom: 12,
@@ -505,7 +411,7 @@ export default function Configuracoes() {
       </Secao>
 
       {/* 5. Políticas e tom */}
-      <Secao titulo="6. Política e tom do bot" desc="Como o bot se comporta e o que ele pode prometer.">
+      <Secao titulo="5. Política e tom do bot" desc="Como o bot se comporta e o que ele pode prometer.">
         <Campo label="Política de reembolso"
           hint="O bot usa esse texto quando o cliente reclamar de cobrança indevida ou máquina que não funcionou.">
           <Textarea value={config.politicaReembolso}
@@ -530,7 +436,7 @@ export default function Configuracoes() {
       </Secao>
 
       {/* 6. Comportamento */}
-      <Secao titulo="7. Comportamento do bot" desc="Configure como o bot lida com contatos e quando deve chamar você.">
+      <Secao titulo="6. Comportamento do bot" desc="Configure como o bot lida com contatos e quando deve chamar você.">
         <Campo label="Número de atendimento"
           hint="Se for seu número pessoal, o bot ignora automaticamente quem está na sua agenda de contatos.">
           <div style={{ display: "flex", gap: 12 }}>
@@ -586,7 +492,7 @@ export default function Configuracoes() {
       </Secao>
 
       {/* 7. Mensagem de boas-vindas e áudio */}
-      <Secao titulo="8. Atendimento automático" desc="Configure a primeira mensagem e o suporte a áudio.">
+      <Secao titulo="7. Atendimento automático" desc="Configure a primeira mensagem e o suporte a áudio.">
         <Campo label="Mensagem de boas-vindas"
           hint="Enviada automaticamente quando um cliente novo manda a primeira mensagem.">
           <Textarea
@@ -628,7 +534,7 @@ export default function Configuracoes() {
       </Secao>
 
       {/* 8. Preview */}
-      <Secao titulo="9. Preview do prompt" desc="Veja como o bot vai ser instruído com base nas suas configurações.">
+      <Secao titulo="8. Preview do prompt" desc="Veja como o bot vai ser instruído com base nas suas configurações.">
         <Btn variant="ghost" onClick={gerarPreview} disabled={loadingPreview}>
           {loadingPreview ? "Gerando..." : "🔍 Gerar preview"}
         </Btn>

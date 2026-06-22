@@ -29,7 +29,6 @@ model Lavanderia {
 
   conversas Conversa[]
   usuarios  Usuario[]
-  midias    MidiaResposta[]
 }
 
 model Usuario {
@@ -56,7 +55,6 @@ model Conversa {
   status       StatusConversa @default(BOT)
   primeiraMsg  Boolean        @default(true)
   botResetadoEm DateTime?
-  arquivadaEm   DateTime?
   criadaEm     DateTime       @default(now())
   atualizadaEm DateTime       @updatedAt
 
@@ -81,19 +79,4 @@ model Mensagem {
   criadaEm   DateTime      @default(now())
 
   @@index([conversaId, criadaEm])
-}
-
-model MidiaResposta {
-  id            String     @id @default(cuid())
-  lavanderiaId  String
-  lavanderia    Lavanderia @relation(fields: [lavanderiaId], references: [id], onDelete: Cascade)
-  nome          String
-  tipo          String
-  arquivo       String
-  quandoEnviar  String
-  legenda       String?
-  ativa         Boolean    @default(true)
-  criadaEm      DateTime   @default(now())
-
-  @@index([lavanderiaId])
 }

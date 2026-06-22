@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { montarSecaoItens } from "./itens-prompt.js";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.AI_MODEL || "claude-haiku-4-5";
@@ -21,7 +20,7 @@ const ESCALACOES_LABELS = {
   multiplas: "cliente mandar mais de 5 mensagens sem o problema ser resolvido",
 };
 
-export function montarSystemPrompt(lavanderia, midias = []) {
+export function montarSystemPrompt(lavanderia) {
   const agora = new Date().toLocaleString("pt-BR", {
     timeZone: "America/Sao_Paulo",
     weekday: "long",
@@ -80,7 +79,6 @@ ${c.observacoesPagamento ? `Obs: ${c.observacoesPagamento}` : ""}
 
 # Politica de reembolso
 ${c.politicaReembolso || "Reembolsos pelo suporte."}
-${montarSecaoItens(c.itensLavagem)}
 
 # Perguntas frequentes
 ${faq || "Responda com base nas informacoes acima."}
@@ -91,29 +89,13 @@ ${tom}
 # Escalacao para humano (OBRIGATORIO)
 ${regrasEscalacao}
 
-${midias.length > 0 ? `# MIDIAS DISPONIVEIS (USAR QUANDO RELEVANTE)
-
-Voce tem acesso a estas midias cadastradas. QUANDO o contexto da pergunta do cliente corresponder ao "Enviar quando", VOCE DEVE incluir a tag [MIDIA:id] no final da sua resposta.
-
-Lista de midias:
-${midias.map(m => `- ID:${m.id} | "${m.nome}" (${m.tipo}) | Enviar quando: ${m.quandoEnviar}`).join("\n")}
-
-Como usar a tag:
-- Escreva uma resposta CURTA (1-3 frases) introduzindo a midia
-- No FINAL, adicione a tag: [MIDIA:id_da_midia]
-- Exemplo correto: "Claro! Olha aqui como funciona 👇 [MIDIA:midiateste1]"
-- Exemplo correto: "Vou te mostrar! [MIDIA:midiateste1]"
-- Quando enviar midia, NAO descreva passo-a-passo no texto (a midia ja explica)
-- NUNCA invente IDs - use APENAS os listados acima
-- Pode combinar [MIDIA:id] com [HUMANO] se precisar escalar tambem` : ""}
-
 # Instrucoes
 - Responda em portugues brasileiro, curto e direto (e WhatsApp).
 - NUNCA invente informacao. Se nao souber, indique o telefone.
 - Tag [HUMANO] somente no final da mensagem.`;
 }
 
-export async function gerarResposta(lavanderia, historicoMensagens, midias = []) {
+export async function gerarResposta(lavanderia, historicoMensagens) {
   const mensagensRecentes = historicoMensagens.slice(-MAX_HISTORICO);
 
   const messages = [];
@@ -128,11 +110,12 @@ export async function gerarResposta(lavanderia, historicoMensagens, midias = [])
   }
 
   while (messages.length && messages[0].role !== "user") messages.shift();
-  if (!messages.length) return { texto: null, precisaHumano: false, midiaId: null };
+  if (!messages.length) return { texto: null, precisaHumano: false };
+
   const resposta = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 500,
-    system: montarSystemPrompt(lavanderia, midias),
+    system: montarSystemPrompt(lavanderia),
     messages,
     stream: false,
   });
@@ -145,12 +128,6 @@ export async function gerarResposta(lavanderia, historicoMensagens, midias = [])
 
   const precisaHumano = texto.includes("[HUMANO]");
   texto = texto.replace("[HUMANO]", "").trim();
-  let midiaId = null;
-  const matchMidia = texto.match(/\[MIDIA:([a-z0-9]+)\]/i);
-  if (matchMidia) {
-    midiaId = matchMidia[1];
-    texto = texto.replace(matchMidia[0], "").trim();
-  }
 
-  return { texto, precisaHumano, midiaId };
+  return { texto, precisaHumano };
 }

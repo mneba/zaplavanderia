@@ -39,7 +39,6 @@ export const api = {
   conversa: (id) => req("GET", `/painel/conversas/${id}`),
   assumir: (id) => req("POST", `/painel/conversas/${id}/assumir`, {}),
   liberar: (id) => req("POST", `/painel/conversas/${id}/liberar`, {}),
-  resetar: (id) => req("POST", `/painel/conversas/${id}/resetar`, {}),
   responder: (id, texto) => req("POST", `/painel/conversas/${id}/responder`, { texto }),
 
   // Clientes e disparo

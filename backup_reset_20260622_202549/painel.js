@@ -26,7 +26,7 @@ export async function painelRoutes(app) {
     const take = 30;
     const skip = (Number(pagina) - 1) * take;
 
-    const where = { lavanderiaId, arquivadaEm: null, ...(status ? { status } : {}) };
+    const where = { lavanderiaId, ...(status ? { status } : {}) };
     const [conversas, total] = await Promise.all([
       app.prisma.conversa.findMany({
         where,
@@ -98,20 +98,6 @@ export async function painelRoutes(app) {
     app.notificarWs(lavanderiaId, { tipo: "CONVERSA_ATUALIZADA", conversaId: conversa.id, status: "BOT" });
     return { ok: true };
   });
-  app.post("/painel/conversas/:id/resetar", { preHandler: [app.authenticate] }, async (req, reply) => {
-    const { lavanderiaId } = req.user;
-    const conversa = await app.prisma.conversa.findFirst({
-      where: { id: req.params.id, lavanderiaId },
-    });
-    if (!conversa) return reply.status(404).send({ erro: "Conversa não encontrada" });
-    await app.prisma.conversa.update({
-      where: { id: conversa.id },
-      data: { botResetadoEm: new Date(), arquivadaEm: new Date() },
-    });
-    return { ok: true };
-  });
-
-
 
   app.post("/painel/conversas/:id/responder", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { lavanderiaId } = req.user;
@@ -155,7 +141,7 @@ export async function painelRoutes(app) {
     if (plano !== "PRO") return reply.status(403).send({ erro: "Recurso exclusivo do Plano Pro" });
 
     const conversas = await app.prisma.conversa.findMany({
-      where: { lavanderiaId, arquivadaEm: null },
+      where: { lavanderiaId },
       orderBy: { atualizadaEm: "desc" },
       select: {
         id: true,

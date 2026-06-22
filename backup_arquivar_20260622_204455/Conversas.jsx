@@ -28,7 +28,7 @@ function BolhaMensagem({ msg }) {
   );
 }
 
-function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar, onArquivada }) {
+function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar }) {
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(true);
@@ -80,13 +80,11 @@ function DetalheConversa({ conversa, onAtualizar, toast, wsEventos, onVoltar, on
   }
 
   async function resetar() {
-    if (!confirm("Arquivar essa conversa? Ela sai da lista, mas o histórico fica salvo. Se o cliente voltar a mandar mensagem, a conversa reabre automaticamente com contexto novo.")) return;
+    if (!confirm("Resetar contexto da conversa? O bot vai esquecer o histórico desta conversa na próxima mensagem do cliente.")) return;
     try {
       await api.resetar(conversa.id);
-      toast.show("Conversa arquivada");
+      toast.show("Contexto resetado");
       setMenuAcoesAberto(false);
-      onArquivada?.();
-      onAtualizar?.();
     } catch (e) { toast.show(e.message, "error"); }
   }
 
@@ -327,7 +325,6 @@ export default function Conversas() {
             toast={toast}
             wsEventos={wsEventos}
             onVoltar={() => setMobileDetalhe(false)}
-            onArquivada={() => { setSelecionada(null); setMobileDetalhe(false); }}
           />
         ) : (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--ink-soft)", flexDirection: "column", gap: 8 }}>
