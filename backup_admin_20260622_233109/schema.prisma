@@ -37,7 +37,6 @@ model Usuario {
   email        String     @unique
   senhaHash    String
   nome         String
-  superAdmin    Boolean   @default(false)
   lavanderiaId String
   lavanderia   Lavanderia @relation(fields: [lavanderiaId], references: [id])
   criadoEm     DateTime   @default(now())

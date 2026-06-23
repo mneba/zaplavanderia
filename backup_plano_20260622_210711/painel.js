@@ -18,12 +18,9 @@ function delayAleatorio() {
 
 export async function painelRoutes(app) {
   const auth = { preHandler: [app.authenticate] };
-  const authPro = { preHandler: [app.requerPro] };
 
   // ── Conversas ─────────────────────────────────────────────
-  
-
-app.get("/painel/conversas", auth, async (req) => {
+  app.get("/painel/conversas", auth, async (req) => {
     const { lavanderiaId } = req.user;
     const { status, pagina = 1 } = req.query;
     const take = 30;
@@ -153,7 +150,7 @@ app.get("/painel/conversas", auth, async (req) => {
   });
 
   // ── Clientes (Pro) ───────────────────────────────────────
-  app.get("/painel/clientes", authPro, async (req, reply) => {
+  app.get("/painel/clientes", auth, async (req, reply) => {
     const { lavanderiaId, plano } = req.user;
     if (plano !== "PRO") return reply.status(403).send({ erro: "Recurso exclusivo do Plano Pro" });
 
@@ -180,7 +177,7 @@ app.get("/painel/conversas", auth, async (req) => {
   });
 
   // ── Disparo Pro ──────────────────────────────────────────
-  app.post("/painel/disparo", authPro, async (req, reply) => {
+  app.post("/painel/disparo", auth, async (req, reply) => {
     const { lavanderiaId, plano } = req.user;
     if (plano !== "PRO") return reply.status(403).send({ erro: "Recurso exclusivo do Plano Pro" });
 

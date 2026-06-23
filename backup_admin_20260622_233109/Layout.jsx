@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { usePlano } from "../lib/usePlano.js";
 import { useNavigate, Outlet, NavLink } from "react-router-dom";
 import { criarWs } from "../lib/api.js";
 import { Logo, Badge } from "../components/ui.jsx";
-import { MessageSquare, Wifi, Users, Megaphone, Settings, ImagePlay, Crown, Shield } from "lucide-react";
+import { MessageSquare, Wifi, Users, Megaphone, Settings, ImagePlay, Crown } from "lucide-react";
 
 const NAV = [
   { to: "/", label: "Conversas", Icon: MessageSquare },
@@ -16,9 +15,6 @@ const NAV = [
 ];
 
 export default function Layout() {
-  const { isSuperAdmin } = usePlano();
-  const navItems = isSuperAdmin ? [...NAV, { to: "/admin", label: "Admin", Icon: Shield }] : NAV;
-
   const nav = useNavigate();
   const [usuario] = useState(() => {
     try { return JSON.parse(localStorage.getItem("zap_usuario")); } catch { return null; }
@@ -47,13 +43,13 @@ export default function Layout() {
     nav("/login");
   }
 
-  const isPro = usuario?.plano === "PRO" || usuario?.plano === "TRIAL";
+  const isPro = usuario?.plano === "PRO";
   const trialDias = usuario?.plano === "TRIAL" && usuario?.trialExpiraEm
     ? Math.max(0, Math.ceil((new Date(usuario.trialExpiraEm) - Date.now()) / 86400000))
     : null;
 
   function renderNavItems(onClose) {
-    return navItems.map((item) => {
+    return NAV.map((item) => {
       if (item.pro && !isPro) {
         const IconPro = item.Icon;
         return (

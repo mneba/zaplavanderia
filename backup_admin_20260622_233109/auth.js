@@ -58,7 +58,6 @@ export async function authRoutes(app) {
       email: usuario.email,
       lavanderia: usuario.lavanderia.nome,
       plano: usuario.lavanderia.plano,
-      superAdmin: usuario.superAdmin,
     };
   });
 }

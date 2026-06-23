@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
 import Login from "./pages/Login.jsx";
-import Admin from "./pages/Admin.jsx";
 import Planos from "./pages/Planos.jsx";
 import Cadastro from "./pages/Cadastro.jsx";
 import TrialExpirado from "./pages/TrialExpirado.jsx";
@@ -30,9 +29,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="clientes" element={<Clientes />} />
         <Route path="disparo" element={<Disparo />} />
         <Route path="midias" element={<Midias />} />
-        <Route path="admin" element={<Admin />} />
-        <Route path="planos" element={<Planos />} />
-          <Route path="configuracoes" element={<Configuracoes />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
       </Route>
     </Routes>
   </BrowserRouter>

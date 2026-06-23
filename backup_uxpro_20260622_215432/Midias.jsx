@@ -1,15 +1,9 @@
 import { useState, useEffect } from "react";
-import { usePlano } from "../lib/usePlano.js";
-import BloqueioPro from "../components/BloqueioPro.jsx";
 import { api } from "../lib/api.js";
 import { Btn, Spinner, Empty, useToast, Card } from "../components/ui.jsx";
 import { Trash2, Plus, Image as ImageIcon, Video, X } from "lucide-react";
 
 export default function Midias() {
-
-  const { isPro, loading: planoLoading } = usePlano();
-  if (planoLoading) return null;
-  if (!isPro) return <BloqueioPro feature="Midias automaticas" descricao="Cadastre fotos e videos para o bot enviar automaticamente quando o cliente perguntar (ex: video de como usar a maquina). E so configurar." />;
   const [midias, setMidias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);

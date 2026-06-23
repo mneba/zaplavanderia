@@ -7,7 +7,7 @@ const MIDIAS_DIR = process.env.MIDIAS_DIR || "/data/midias";
 
 export async function midiasRoutes(app) {
   // Listar midias da lavanderia
-  app.get("/config/midias", { preHandler: [app.requerPro] }, async (req) => {
+  app.get("/config/midias", { preHandler: [app.authenticate] }, async (req) => {
     const midias = await app.prisma.midiaResposta.findMany({
       where: { lavanderiaId: req.user.lavanderiaId },
       orderBy: { criadaEm: "desc" },
@@ -16,7 +16,7 @@ export async function midiasRoutes(app) {
   });
 
   // Criar (multipart: arquivo + campos)
-  app.post("/config/midias", { preHandler: [app.requerPro] }, async (req, reply) => {
+  app.post("/config/midias", { preHandler: [app.authenticate] }, async (req, reply) => {
     let nome, quandoEnviar, legenda, buffer, mimetype;
     try {
       const parts = req.parts();
@@ -76,7 +76,7 @@ export async function midiasRoutes(app) {
   });
 
   // Atualizar (ativar/desativar/editar campos)
-  app.patch("/config/midias/:id", { preHandler: [app.requerPro] }, async (req, reply) => {
+  app.patch("/config/midias/:id", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { nome, quandoEnviar, legenda, ativa } = req.body || {};
     const m = await app.prisma.midiaResposta.findFirst({
       where: { id: req.params.id, lavanderiaId: req.user.lavanderiaId },
@@ -96,7 +96,7 @@ export async function midiasRoutes(app) {
   });
 
   // Deletar
-  app.delete("/config/midias/:id", { preHandler: [app.requerPro] }, async (req, reply) => {
+  app.delete("/config/midias/:id", { preHandler: [app.authenticate] }, async (req, reply) => {
     const m = await app.prisma.midiaResposta.findFirst({
       where: { id: req.params.id, lavanderiaId: req.user.lavanderiaId },
     });

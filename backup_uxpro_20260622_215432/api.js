@@ -29,8 +29,6 @@ export const api = {
   // Auth
   login: (email, senha) => req("POST", "/auth/login", { email, senha }),
   me: () => req("GET", "/auth/me"),
-  listarLavanderias: () => req("GET", "/admin/lavanderias"),
-  mudarPlano: (id, plano) => req("PATCH", `/admin/lavanderias/${id}/plano`, { plano }),
   cadastrar: (dados) => req("POST", "/cadastro", dados),
 
   // Painel

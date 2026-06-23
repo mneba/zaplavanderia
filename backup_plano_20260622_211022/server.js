@@ -8,7 +8,6 @@ import { gerarResposta } from "./ia.js";
 import { authRoutes } from "./auth.js";
 import { cadastroRoutes } from "./cadastro.js";
 import { painelRoutes } from "./painel.js";
-import { adminRoutes } from "./admin.js";
 import { configRoutes } from "./config-routes.js";
 import { conexaoRoutes } from "./conexao.js";
 import { transcreverAudio } from "./audio.js";
@@ -51,16 +50,6 @@ app.decorate("requerPro", async (req, reply) => {
   if (lav.plano !== "PRO" && lav.plano !== "TRIAL") {
     return reply.status(403).send({ erro: "plano_insuficiente", mensagem: "Esta funcionalidade é exclusiva do plano Pro." });
   }
-});
-
-// Verifica se o usuario tem flag superAdmin
-app.decorate("requerSuperAdmin", async (req, reply) => {
-  try { await req.jwtVerify(); } catch { return reply.status(401).send({ erro: "Não autorizado" }); }
-  const u = await prisma.usuario.findUnique({
-    where: { id: req.user.usuarioId },
-    select: { superAdmin: true },
-  });
-  if (!u?.superAdmin) return reply.status(403).send({ erro: "acesso_negado" });
 });
 
 // ── Middleware: trial/ativo ───────────────────────────────────
@@ -107,7 +96,6 @@ app.register(async (fastify) => {
 await app.register(authRoutes);
 await app.register(cadastroRoutes);
 await app.register(painelRoutes);
-app.register(adminRoutes);
 await app.register(configRoutes);
 await app.register(conexaoRoutes);
 await app.register(FastifyMultipart, { limits: { fileSize: 10 * 1024 * 1024 } });

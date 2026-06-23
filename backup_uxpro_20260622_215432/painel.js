@@ -21,9 +21,7 @@ export async function painelRoutes(app) {
   const authPro = { preHandler: [app.requerPro] };
 
   // ── Conversas ─────────────────────────────────────────────
-  
-
-app.get("/painel/conversas", auth, async (req) => {
+  app.get("/painel/conversas", auth, async (req) => {
     const { lavanderiaId } = req.user;
     const { status, pagina = 1 } = req.query;
     const take = 30;
